@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate, Navigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 const tiers = {
   free: { name: 'Free', price: '$0', color: 'slate' },
@@ -18,12 +19,51 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [teamPin, setTeamPin] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const { register, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
 
   const currentTier = tiers[tier]
 
-  const handleSubmit = (e) => {
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // TODO: implement signup
+    setError('')
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const nameParts = name.trim().split(/\s+/)
+      const firstName = nameParts[0] || ''
+      const lastName = nameParts.slice(1).join(' ') || ''
+      await register({
+        username: email,
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+        tier: tier.toUpperCase(),
+      })
+      navigate('/dashboard')
+    } catch (err) {
+      const data = err.response?.data
+      if (data) {
+        const msg = data.detail || data.error || (typeof data === 'object' ? Object.values(data).flat().join(' ') : String(data))
+        setError(msg)
+      } else {
+        setError('Registration failed. Please try again.')
+      }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const inputClass =
@@ -103,6 +143,12 @@ export default function Signup() {
               {tier === 'exclusive' && 'Full platform access with team collaboration & dedicated support.'}
             </span>
           </div>
+
+          {error && (
+            <div className="mb-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Full Name */}
@@ -217,9 +263,10 @@ export default function Signup() {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 cursor-pointer text-sm mt-2"
+              disabled={submitting}
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 cursor-pointer text-sm mt-2"
             >
-              Create {currentTier.name} Account
+              {submitting ? 'Creating account...' : `Create ${currentTier.name} Account`}
             </button>
           </form>
 

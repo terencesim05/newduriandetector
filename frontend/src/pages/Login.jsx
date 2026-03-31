@@ -1,14 +1,33 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, Navigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const { login, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // TODO: implement auth
+    setError('')
+    setSubmitting(true)
+    try {
+      await login(email, password)
+      navigate('/dashboard')
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.response?.data?.error || 'Invalid email or password. Please try again.'
+      setError(msg)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -42,6 +61,12 @@ export default function Login() {
 
         {/* Card */}
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8">
+          {error && (
+            <div className="mb-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div>
@@ -101,9 +126,10 @@ export default function Login() {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 cursor-pointer text-sm mt-2"
+              disabled={submitting}
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 cursor-pointer text-sm mt-2"
             >
-              Sign In
+              {submitting ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 

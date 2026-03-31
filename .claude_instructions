@@ -1,0 +1,164 @@
+# IDS Alert Aggregation & Active Traffic Filtering Platform
+
+## Project Purpose
+Develop a system to support network administrators in managing intrusion detection with BOTH passive monitoring AND active traffic filtering capabilities.
+
+## Dual Architecture
+
+### Mode 1: Passive Alert Aggregation
+- Receive alerts from Suricata, Zeek, Snort, Kismet
+- Normalize and correlate alerts
+- ML-based pattern detection
+- Unified dashboard
+
+### Mode 2: Active Traffic Filtering (Inline IDS)
+- Real-time traffic inspection
+- Automatic quarantine of known threats
+- Filtering of suspicious transactions
+- Configurable blocking rules
+
+## Functional Requirements
+
+### (a) Traffic Monitoring & Analysis
+- Monitor all web traffic in real-time
+- Support multiple traffic analysis engines
+- Aggregate data from various sources
+
+### (b) Quarantine System
+- Auto-quarantine known threats:
+  - Blacklisted IP addresses
+  - Blacklisted domains
+  - Known malicious signatures
+- Network Admin configurable blacklist management
+- Immediate action on threat detection
+
+### (c) Traffic Filtering
+- Filter suspicious transactions:
+  - High volume from single IP (rate limiting)
+  - Multiple failed login attempts
+  - Brute force detection
+  - DDoS pattern recognition
+- Admin-configurable thresholds:
+  - Volume limits per time period
+  - Retry attempt limits
+  - Custom pattern definitions
+
+### (d) Threat Definition Management
+Network Admin can configure:
+- Known threat definitions
+- Danger level classifications
+- DoS/DDoS attack parameters
+- Suspicious transaction patterns
+- Custom rule creation
+
+### (e1) ML Model Training Configuration
+Network Admin can adjust:
+- Training data selection
+- Feature engineering parameters
+- Model hyperparameters
+- Retraining schedules
+- Sensitivity/threshold tuning
+
+### (e2) ML Model Selection
+- Multiple pre-trained models available
+- Admin selects which models to apply
+- Model ensemble configuration
+- A/B testing different models
+- Performance comparison dashboard
+
+### (f) Search, Filter & Visualization
+Admin can configure:
+- Search by traffic categories
+- Date/time range filtering (FROM/TO)
+- Graph customization:
+  - X/Y axis data selection
+  - Data range configuration
+  - Line/bar colors
+  - Chart types (line, bar, pie, heatmap)
+- Export capabilities
+
+## Non-Functional Requirements
+
+### Performance
+- Real-time intrusion detection (<100ms latency)
+- Fast graph/chart generation (<1 second)
+- Scalable to handle 10,000+ events/second
+- Optimized database queries
+- Caching for frequently accessed data
+
+## Tech Stack
+- Frontend: React + Vite + Tailwind + Chart.js/D3.js
+- Auth Service: Django + DRF + JWT (port 8000)
+- Traffic Filtering Engine: FastAPI + async processing (port 8001)
+- Log Aggregation: FastAPI + Celery + Redis (port 8001)
+- Database: Supabase PostgreSQL (connection pooler)
+- ML: scikit-learn, TensorFlow (for traffic pattern recognition)
+- Real-time: Django Channels / WebSockets
+
+## Key Components to Build
+
+### 1. Blacklist Management
+- IP blacklist CRUD
+- Domain blacklist CRUD
+- Whitelist exceptions
+- Import/export blacklists
+- Threat intelligence feed integration
+
+### 2. Rule Engine
+- Rate limiting rules
+- Pattern matching rules
+- Custom rule builder UI
+- Rule priority system
+- Rule testing/simulation
+
+### 3. Quarantine System
+- Quarantine queue
+- Manual review interface
+- Auto-release after X time
+- False positive handling
+- Quarantine statistics
+
+### 4. ML Configuration Dashboard
+- Model selection UI
+- Hyperparameter tuning interface
+- Training data management
+- Model performance metrics
+- A/B testing results
+
+### 5. Advanced Analytics
+- Traffic volume charts (customizable X/Y axis)
+- Threat heatmaps
+- Geo-location mapping
+- Time-series analysis
+- Custom report builder
+
+### 6. Real-time Dashboard
+- Live traffic feed
+- Active threats counter
+- Quarantined items count
+- System health monitoring
+- Alert notifications
+
+## Project Structure
+project-root/
+├── frontend/                    # React app
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Alerts.jsx
+│   │   │   ├── Quarantine.jsx   # NEW
+│   │   │   ├── Blacklist.jsx    # NEW
+│   │   │   ├── Rules.jsx        # NEW
+│   │   │   ├── MLConfig.jsx     # NEW
+│   │   │   └── Analytics.jsx    # NEW
+│   │   └── ...
+├── services/
+│   ├── auth-service/           # Django
+│   └── traffic-engine/         # FastAPI (renamed from log-service)
+│       ├── app/
+│       │   ├── filtering/      # Traffic filtering logic
+│       │   ├── quarantine/     # Quarantine management
+│       │   ├── ml/             # ML models
+│       │   ├── rules/          # Rule engine
+│       │   └── aggregation/    # Alert aggregation
+└── .env

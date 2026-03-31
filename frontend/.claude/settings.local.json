@@ -6,7 +6,25 @@
       "Bash(npm ls:*)",
       "Read(//c/Users/Terence01/Documents/GitHub/**)",
       "Read(//c/Users/Terence01/Documents/GitHub/NewDurianDetector/**)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(pip install:*)",
+      "Bash(where python:*)",
+      "Bash(where pip:*)",
+      "Bash(python3 -m pip install -r /c/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/auth-service/requirements.txt)",
+      "Bash(where python3:*)",
+      "Bash(ls /c/Python*)",
+      "Read(//c/Users/Terence01/AppData/Local/Programs/**)",
+      "Bash(\"/c/Users/Terence01/AppData/Local/Python/bin/python.exe\" --version 2>&1)",
+      "Bash(\"/c/Users/Terence01/AppData/Local/Python/bin/python.exe\" -m pip install -r /c/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/auth-service/requirements.txt)",
+      "Bash(PYTHON=\"/c/Users/Terence01/AppData/Local/Python/bin/python.exe\")",
+      "Bash($PYTHON -m django startproject auth_service .)",
+      "Bash($PYTHON manage.py startapp users)",
+      "Bash($PYTHON manage.py startapp teams)",
+      "Bash($PYTHON manage.py startapp subscriptions)",
+      "Bash(\"/c/Users/Terence01/AppData/Local/Python/bin/python.exe\" manage.py check 2>&1)",
+      "Bash(\"/c/Users/Terence01/AppData/Local/Python/bin/python.exe\" manage.py makemigrations 2>&1)",
+      "Bash(\"/c/Users/Terence01/AppData/Local/Python/bin/python.exe\" manage.py migrate 2>&1)",
+      "Bash(npx vite:*)"
     ]
   }
 }
