@@ -11,11 +11,11 @@ import {
   X,
 } from 'lucide-react';
 
-const navItems = [
+const baseNavItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/alerts', label: 'Alerts', icon: Bell },
   { to: '/incidents', label: 'Incidents', icon: AlertTriangle },
-  { to: '/teams', label: 'Teams', icon: Users },
+  { to: '/teams', label: 'Teams', icon: Users, exclusiveOnly: true },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -51,7 +51,7 @@ export default function Sidebar({ open, onClose }) {
               <Shield className="w-4 h-4 text-white" />
             </div>
             <span className="text-lg font-semibold tracking-tight text-white">
-              IDS Monitor
+              DurianDetector
             </span>
           </div>
           <button
@@ -64,7 +64,9 @@ export default function Sidebar({ open, onClose }) {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {baseNavItems
+            .filter(({ exclusiveOnly }) => !exclusiveOnly || tier.toUpperCase() === 'EXCLUSIVE')
+            .map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}

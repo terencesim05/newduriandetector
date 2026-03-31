@@ -4,7 +4,10 @@
       "Bash(npm install:*)",
       "Bash(npx vite:*)",
       "Bash(xargs grep:*)",
-      "Bash(xargs ls:*)"
+      "Bash(xargs ls:*)",
+      "Bash(claude usage:*)",
+      "Bash(py manage.py dbshell -c \"SELECT column_name FROM information_schema.columns WHERE table_name = ''teams'';\")",
+      "Bash(py -c \":*)"
     ]
   }
 }

@@ -14,6 +14,7 @@ class User(AbstractUser):
         'teams.Team', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='members',
     )
+    is_team_leader = models.BooleanField(default=False)
     subscription_status = models.CharField(max_length=20, default='active')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

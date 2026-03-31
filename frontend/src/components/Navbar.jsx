@@ -24,7 +24,7 @@ export default function Navbar({ onMenuClick }) {
           <Menu className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-slate-500">IDS Monitor</span>
+          <span className="text-slate-500">DurianDetector</span>
           <span className="text-slate-600">/</span>
           <span className="text-white font-medium">{title}</span>
         </div>

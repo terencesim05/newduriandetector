@@ -9,10 +9,10 @@ const tabs = [
   { id: 'notifications', label: 'Notifications', icon: Bell },
 ];
 
-const tierColors = {
-  free: 'bg-slate-500/15 text-slate-300 border-slate-500/30',
-  premium: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-  exclusive: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+const tierStyles = {
+  free: { border: '#9CA3AF', color: '#9CA3AF', bg: 'rgba(156,163,175,0.1)' },
+  premium: { border: '#3B82F6', color: '#3B82F6', bg: 'rgba(59,130,246,0.1)' },
+  exclusive: { border: '#A855F7', color: '#A855F7', bg: 'rgba(168,85,247,0.1)' },
 };
 
 export default function Settings() {
@@ -25,7 +25,7 @@ export default function Settings() {
   const [severityThreshold, setSeverityThreshold] = useState(50);
   const [twoFA, setTwoFA] = useState(false);
 
-  const tier = user?.tier || 'free';
+  const tier = (user?.tier || 'free').toLowerCase();
 
   const inputClass =
     'w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-600 outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20 transition-all';
@@ -96,7 +96,12 @@ export default function Settings() {
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Current Tier</label>
               <span
-                className={`inline-block text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded border ${tierColors[tier]}`}
+                className="inline-block text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border-2"
+                style={{
+                  borderColor: tierStyles[tier]?.border,
+                  color: tierStyles[tier]?.color,
+                  backgroundColor: tierStyles[tier]?.bg,
+                }}
               >
                 {tier}
               </span>

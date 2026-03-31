@@ -42,4 +42,21 @@ export const authService = {
     const response = await authApi.post('/api/auth/refresh/', { refresh: refreshToken });
     return response.data;
   },
+
+  async getMyTeam() {
+    const response = await authApi.get('/api/teams/');
+    // Returns array of teams — user belongs to one
+    const teams = response.data;
+    return teams.length > 0 ? teams[0] : null;
+  },
+
+  async createTeam(name) {
+    const response = await authApi.post('/api/teams/', { name });
+    return response.data;
+  },
+
+  async regeneratePin(teamId) {
+    const response = await authApi.post(`/api/teams/${teamId}/regenerate_pin/`);
+    return response.data;
+  },
 };

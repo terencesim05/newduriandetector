@@ -13,11 +13,13 @@ export default function Signup() {
   const initialTier = searchParams.get('tier') || 'free'
 
   const [tier, setTier] = useState(initialTier)
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [teamPin, setTeamPin] = useState('')
+  const [isTeamLeader, setIsTeamLeader] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -41,17 +43,24 @@ export default function Signup() {
 
     setSubmitting(true)
     try {
-      const nameParts = name.trim().split(/\s+/)
-      const firstName = nameParts[0] || ''
-      const lastName = nameParts.slice(1).join(' ') || ''
-      await register({
+      const userData = {
         username: email,
         email,
         password,
-        first_name: firstName,
-        last_name: lastName,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
         tier: tier.toUpperCase(),
-      })
+      }
+
+      // Exclusive: send team role + PIN if joining
+      if (tier === 'exclusive') {
+        userData.is_team_leader = isTeamLeader
+        if (!isTeamLeader && teamPin) {
+          userData.team_pin = teamPin
+        }
+      }
+
+      await register(userData)
       navigate('/dashboard')
     } catch (err) {
       const data = err.response?.data
@@ -151,20 +160,36 @@ export default function Signup() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Full Name */}
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-1.5">
-                Full Name
-              </label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
-                required
-                className={inputClass}
-              />
+            {/* Name fields */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="first-name" className="block text-sm font-medium text-slate-300 mb-1.5">
+                  First Name
+                </label>
+                <input
+                  id="first-name"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="John"
+                  required
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="last-name" className="block text-sm font-medium text-slate-300 mb-1.5">
+                  Last Name
+                </label>
+                <input
+                  id="last-name"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Doe"
+                  required
+                  className={inputClass}
+                />
+              </div>
             </div>
 
             {/* Email */}
@@ -233,31 +258,79 @@ export default function Signup() {
               />
             </div>
 
-            {/* Team PIN — Exclusive only */}
+            {/* Exclusive role selection + optional Team PIN */}
             {tier === 'exclusive' && (
-              <div>
-                <label htmlFor="team-pin" className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Team PIN
-                  <span className="text-slate-500 font-normal ml-1.5">(provided by your admin)</span>
-                </label>
-                <div className="relative">
-                  <input
-                    id="team-pin"
-                    type="text"
-                    value={teamPin}
-                    onChange={(e) => setTeamPin(e.target.value)}
-                    placeholder="e.g. TEAM-XXXX-XXXX"
-                    required
-                    className={`${inputClass} tracking-widest font-mono`}
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4 text-slate-600">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
-                    </svg>
+              <>
+                {/* Role selector */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">I am a...</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setIsTeamLeader(true); setTeamPin('') }}
+                      className={`rounded-lg px-3 py-3 text-center transition-all cursor-pointer ${
+                        isTeamLeader
+                          ? 'bg-purple-500/15 border border-purple-500/30 text-white'
+                          : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:border-white/[0.1]'
+                      }`}
+                    >
+                      <div className="text-xs font-semibold uppercase tracking-wide">Team Leader</div>
+                      <div className="text-[11px] text-slate-500 mt-1">Create a new team</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsTeamLeader(false)}
+                      className={`rounded-lg px-3 py-3 text-center transition-all cursor-pointer ${
+                        !isTeamLeader
+                          ? 'bg-blue-500/15 border border-blue-500/30 text-white'
+                          : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:border-white/[0.1]'
+                      }`}
+                    >
+                      <div className="text-xs font-semibold uppercase tracking-wide">Team Member</div>
+                      <div className="text-[11px] text-slate-500 mt-1">Join with a PIN</div>
+                    </button>
                   </div>
                 </div>
-                <p className="mt-1.5 text-xs text-slate-600">Enter the PIN shared by your team administrator to join an existing workspace.</p>
-              </div>
+
+                {/* PIN input — only for members joining a team */}
+                {!isTeamLeader && (
+                  <div>
+                    <label htmlFor="team-pin" className="block text-sm font-medium text-slate-300 mb-1.5">
+                      Team PIN
+                      <span className="text-slate-500 font-normal ml-1.5">(from your team leader)</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="team-pin"
+                        type="text"
+                        value={teamPin}
+                        onChange={(e) => setTeamPin(e.target.value)}
+                        placeholder="e.g. A7X42K"
+                        required
+                        className={`${inputClass} tracking-widest font-mono`}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4 text-slate-600">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-600">Enter the PIN shared by your team leader to join their workspace.</p>
+                  </div>
+                )}
+
+                {/* Leader info */}
+                {isTeamLeader && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/[0.06] border border-purple-500/15">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4 text-purple-400 shrink-0">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+                    </svg>
+                    <span className="text-xs text-purple-300/80">
+                      You'll be the team leader. After signing up, you can generate a PIN to invite up to 4 team members.
+                    </span>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Submit */}
