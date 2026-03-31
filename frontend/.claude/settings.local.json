@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npm ls:*)",
+      "Read(//c/Users/Terence01/Documents/GitHub/**)",
+      "Read(//c/Users/Terence01/Documents/GitHub/NewDurianDetector/**)",
+      "Bash(cd:*)"
+    ]
+  }
+}
