@@ -12,8 +12,10 @@ bearer_scheme = HTTPBearer()
 @dataclass
 class CurrentUser:
     user_id: int
-    tier: str          # FREE, PREMIUM, EXCLUSIVE
+    tier: str            # FREE, PREMIUM, EXCLUSIVE
     team_id: str | None  # UUID string or None
+    user_name: str = ""
+    is_team_leader: bool = False
 
 
 def get_current_user(
@@ -29,6 +31,8 @@ def get_current_user(
             user_id=int(user_id),
             tier=payload.get("tier", "FREE"),
             team_id=payload.get("team_id"),
+            user_name=payload.get("user_name", ""),
+            is_team_leader=payload.get("is_team_leader", False),
         )
     except (JWTError, ValueError) as exc:
         raise HTTPException(

@@ -117,6 +117,8 @@ class AlertOut(BaseModel):
     quarantined_at: datetime | None
     reviewed_by: str | None
     review_notes: str | None
+    assigned_to: int | None
+    assigned_name: str | None
     detected_at: datetime
     created_at: datetime
 

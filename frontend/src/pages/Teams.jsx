@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
-import { Users, Key, Copy, Check, Crown, UserPlus, Shield, Loader2, RefreshCw } from 'lucide-react';
+import { alertService } from '../services/alertService';
+import { Users, Key, Copy, Check, Crown, UserPlus, Shield, Loader2, RefreshCw, Activity, Bell } from 'lucide-react';
 
 const MAX_TEAM_MEMBERS = 4;
 
@@ -14,14 +15,28 @@ export default function Teams() {
   const [teamName, setTeamName] = useState('');
   const [creating, setCreating] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [activity, setActivity] = useState([]);
+  const [teamStats, setTeamStats] = useState(null);
 
   useEffect(() => {
     if (tier === 'EXCLUSIVE') {
       fetchTeam();
+      fetchTeamData();
     } else {
       setLoading(false);
     }
   }, [tier]);
+
+  const fetchTeamData = async () => {
+    try {
+      const [actData, statsData] = await Promise.all([
+        alertService.getTeamActivity(20),
+        alertService.getTeamStats(),
+      ]);
+      setActivity(actData);
+      setTeamStats(statsData);
+    } catch {}
+  };
 
   const fetchTeam = async () => {
     try {
@@ -273,6 +288,60 @@ export default function Teams() {
           </div>
         ))}
       </div>
+
+      {/* Team Stats */}
+      {teamStats && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Alerts</p>
+            <p className="text-2xl font-bold text-white">{teamStats.total_alerts}</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Unassigned</p>
+            <p className="text-2xl font-bold text-yellow-400">{teamStats.unassigned}</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Alerts per Member</p>
+            <div className="space-y-1 mt-2">
+              {teamStats.per_member.length > 0 ? teamStats.per_member.map((m) => (
+                <div key={m.user_id} className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">{m.name}</span>
+                  <span className="text-white font-mono">{m.count}</span>
+                </div>
+              )) : (
+                <span className="text-xs text-slate-500">No assignments yet</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Activity Feed */}
+      {activity.length > 0 && (
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-white/[0.06]">
+            <Activity className="w-4 h-4 text-blue-400" />
+            <h3 className="text-base font-semibold text-white">Recent Activity</h3>
+          </div>
+          <div className="divide-y divide-white/[0.04]">
+            {activity.map((a) => (
+              <div key={a.id} className="flex items-start gap-3 px-5 py-3">
+                <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold shrink-0 mt-0.5">
+                  {(a.user_name?.[0] || '?').toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-slate-300">
+                    <span className="text-white font-medium">{a.user_name}</span>{' '}
+                    <span className="text-slate-500">{a.action.replace(/_/g, ' ')}</span>
+                  </p>
+                  {a.details && <p className="text-xs text-slate-500 mt-0.5 truncate">{a.details}</p>}
+                  <p className="text-xs text-slate-600 mt-0.5">{new Date(a.created_at).toLocaleString()}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

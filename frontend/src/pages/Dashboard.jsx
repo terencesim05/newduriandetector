@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { alertService } from '../services/alertService';
 import {
   Bell,
   AlertTriangle,
@@ -8,6 +10,7 @@ import {
   ScanLine,
   FileText,
   Plus,
+  UserCheck,
 } from 'lucide-react';
 
 const mockAlerts = [
@@ -41,6 +44,16 @@ const colorMap = {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const isExclusive = user?.tier?.toUpperCase() === 'EXCLUSIVE';
+  const [myAlerts, setMyAlerts] = useState([]);
+
+  useEffect(() => {
+    if (isExclusive) {
+      alertService.getAlerts({ assignment: 'mine', pageSize: 5 }).then((data) => {
+        setMyAlerts(data.alerts || []);
+      }).catch(() => {});
+    }
+  }, [isExclusive]);
 
   return (
     <div className="space-y-6">
@@ -152,6 +165,47 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* My Assignments — EXCLUSIVE only */}
+      {isExclusive && myAlerts.length > 0 && (
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+            <div className="flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-blue-400" />
+              <h2 className="text-base font-semibold text-white">My Assignments</h2>
+            </div>
+            <a href="/alerts?assignment=mine" className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition-colors">
+              View All <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/[0.06]">
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Severity</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Category</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Source IP</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {myAlerts.map((alert) => (
+                  <tr key={alert.id} className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors">
+                    <td className="px-5 py-3">
+                      <span className={`inline-block text-xs font-semibold px-2 py-1 rounded border ${severityColors[alert.severity]}`}>
+                        {alert.severity}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-slate-300 font-mono">{alert.category}</td>
+                    <td className="px-5 py-3 text-sm text-slate-400 font-mono">{alert.source_ip}</td>
+                    <td className="px-5 py-3 text-sm text-slate-400 font-mono">{alert.threat_score}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -17,10 +17,11 @@ logApi.interceptors.request.use((config) => {
 });
 
 export const alertService = {
-  async getAlerts({ severity, category, page = 1, pageSize = 20 } = {}) {
+  async getAlerts({ severity, category, assignment, page = 1, pageSize = 20 } = {}) {
     const params = { page, page_size: pageSize };
     if (severity && severity !== 'All') params.severity = severity;
     if (category && category !== 'All') params.category = category;
+    if (assignment && assignment !== 'All') params.assignment = assignment;
     const response = await logApi.get('/api/alerts', { params });
     return response.data;
   },
@@ -118,6 +119,20 @@ export const alertService = {
   },
   async testRule(id) {
     const response = await logApi.post(`/api/rules/${id}/test`);
+    return response.data;
+  },
+
+  // Team collaboration
+  async assignAlert(alertId, assignedTo, assignedName) {
+    const response = await logApi.patch(`/api/team/alerts/${alertId}/assign`, { assigned_to: assignedTo, assigned_name: assignedName });
+    return response.data;
+  },
+  async getTeamActivity(limit = 50) {
+    const response = await logApi.get('/api/team/activity', { params: { limit } });
+    return response.data;
+  },
+  async getTeamStats() {
+    const response = await logApi.get('/api/team/stats');
     return response.data;
   },
 };

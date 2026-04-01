@@ -66,4 +66,6 @@ class Alert(Base):
     quarantined_at = Column(DateTime(timezone=True), nullable=True)
     reviewed_by = Column(String(100), nullable=True)
     review_notes = Column(Text, nullable=True)
+    assigned_to = Column(BigInteger, nullable=True)
+    assigned_name = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

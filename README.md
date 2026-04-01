@@ -101,12 +101,15 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 - 4 stat cards: Total Alerts, Critical Alerts, Open Incidents, Threat Score (with progress bar)
 - Recent Alerts table (Time, Severity, Category, Source IP)
 - Quick Actions: Create Incident, Run Scan, View Reports
-- Currently uses mock data (real data integration planned)
+- **My Assignments** widget (EXCLUSIVE only) — shows alerts assigned to the current user
 
 ### Alerts Page
 
 - **Live data** from the FastAPI log service (no more mock data)
 - Filter by severity (Critical/High/Medium/Low) and category (11 categories)
+- **Assignment filter** (EXCLUSIVE only): All / Assigned to Me / Unassigned
+- **Assign to** dropdown per alert row (EXCLUSIVE only) — select a team member to assign
+- Assigned member badge shown on each alert
 - Search by IP address or category
 - Alert table with severity badges, threat score, and ThreatFox intel column
 - **ThreatFox badge**: red "FLAGGED" badge on alerts where the source IP is a known threat
@@ -129,6 +132,8 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
   - PIN display with copy and regenerate buttons
   - Members list with leader (crown badge) and members
   - Empty slots shown as placeholders
+  - **Team stats**: total alerts, unassigned count, alerts per member breakdown
+  - **Activity feed**: shows who did what — alert assignments, IP blocks, quarantine reviews
 
 ### Settings Page
 
@@ -269,6 +274,9 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | DELETE | `/api/rules/{id}` | Delete a rule |
 | POST | `/api/rules/{id}/toggle` | Enable/disable a rule |
 | POST | `/api/rules/{id}/test` | Test rule against recent alerts |
+| PATCH | `/api/team/alerts/{id}/assign` | Assign alert to team member |
+| GET | `/api/team/activity` | Team activity feed |
+| GET | `/api/team/stats` | Team alert stats (total, unassigned, per-member) |
 
 ## Data Models
 
@@ -287,10 +295,13 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 - Fields: `id` (UUID), `user` (FK), `plan` (FK), `status`, `start_date`, `end_date`, `auto_renew`
 
 ### Alert (Log Service)
-- Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status` (NONE/QUARANTINED/RELEASED/BLOCKED), `quarantined_at`, `reviewed_by`, `review_notes`, `detected_at`, `created_at`
+- Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status`, `quarantined_at`, `reviewed_by`, `review_notes`, `assigned_to`, `assigned_name`, `detected_at`, `created_at`
 
 ### BlacklistEntry / WhitelistEntry (Log Service)
 - Fields: `id` (UUID), `entry_type` (IP/DOMAIN/CIDR), `value`, `reason`, `added_by` (manual/threatfox/bulk_import/rule), `user_id`, `team_id`, `block_count`/`trust_count`, `created_at`
+
+### TeamActivity (Log Service)
+- Fields: `id` (UUID), `user_id`, `user_name`, `team_id`, `action`, `details`, `created_at`
 
 ### Rule (Log Service)
 - Fields: `id` (UUID), `name`, `description`, `rule_type` (RATE_LIMIT/CATEGORY_MATCH/FAILED_LOGIN), `conditions` (JSONB), `actions` (JSONB), `priority` (1–10), `enabled`, `trigger_count`, `user_id`, `team_id`, `created_at`
@@ -370,6 +381,12 @@ Frontend `frontend/.env`:
 - Rule builder UI with condition/action config, priority, enable/disable toggle
 - Rules evaluated during ingestion — first matching rule (by priority) wins
 - Rule test endpoint to dry-run against recent alerts
+- Built alert assignment system — EXCLUSIVE team members can assign alerts to each other
+- Assignment filter on Alerts page (All / Assigned to Me / Unassigned)
+- Team activity feed — logs who assigned what, when
+- Team stats — total alerts, unassigned count, per-member breakdown
+- "My Assignments" widget on Dashboard for EXCLUSIVE users
+- Added `user_name` to JWT for display in activity logs
 - Created test script sending 10 mock alerts across all IDS formats — verified end-to-end ingestion
 
 ## Design

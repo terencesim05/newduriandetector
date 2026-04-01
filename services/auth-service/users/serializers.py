@@ -6,9 +6,11 @@ from .models import User
 
 
 def _add_custom_claims(refresh, user):
-    """Add tier and team_id to both access and refresh tokens."""
+    """Add tier, team_id, and user_name to both access and refresh tokens."""
     refresh["tier"] = user.tier or "FREE"
     refresh["team_id"] = str(user.team_id) if user.team_id else None
+    refresh["user_name"] = f"{user.first_name} {user.last_name}".strip() or user.email
+    refresh["is_team_leader"] = user.is_team_leader
     return refresh
 
 

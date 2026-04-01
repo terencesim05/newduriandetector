@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Loader2, ShieldAlert, ShieldBan, ShieldCheck, ShieldQuestion, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Loader2, ShieldAlert, ShieldBan, ShieldCheck, ShieldQuestion, UserCheck, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { alertService } from '../services/alertService';
 
 const severityColors = {
@@ -110,8 +111,11 @@ function ThreatDetailModal({ alert, onClose }) {
 }
 
 export default function Alerts() {
+  const { user } = useAuth();
+  const isExclusive = user?.tier?.toUpperCase() === 'EXCLUSIVE';
   const [severityFilter, setSeverityFilter] = useState('All');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [assignmentFilter, setAssignmentFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [alerts, setAlerts] = useState([]);
   const [total, setTotal] = useState(0);
@@ -120,10 +124,21 @@ export default function Alerts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedAlert, setSelectedAlert] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
+
+  useEffect(() => {
+    if (isExclusive) {
+      import('../services/authService').then(({ authService }) => {
+        authService.getMyTeam().then((team) => {
+          if (team?.members) setTeamMembers(team.members);
+        }).catch(() => {});
+      });
+    }
+  }, [isExclusive]);
 
   useEffect(() => {
     setPage(1);
-  }, [severityFilter, categoryFilter]);
+  }, [severityFilter, categoryFilter, assignmentFilter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,6 +149,7 @@ export default function Alerts() {
         const data = await alertService.getAlerts({
           severity: severityFilter,
           category: categoryFilter,
+          assignment: assignmentFilter,
           page,
           pageSize,
         });
@@ -151,7 +167,7 @@ export default function Alerts() {
     }
     fetchAlerts();
     return () => { cancelled = true; };
-  }, [severityFilter, categoryFilter, page, pageSize]);
+  }, [severityFilter, categoryFilter, assignmentFilter, page, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -222,6 +238,18 @@ export default function Alerts() {
           <option value="ANOMALY">Anomaly</option>
         </select>
 
+        {isExclusive && (
+          <select
+            value={assignmentFilter}
+            onChange={(e) => setAssignmentFilter(e.target.value)}
+            className={selectClass}
+          >
+            <option value="All">All Assignments</option>
+            <option value="mine">Assigned to Me</option>
+            <option value="unassigned">Unassigned</option>
+          </select>
+        )}
+
         <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 flex-1 min-w-[200px] max-w-sm">
           <Search className="w-4 h-4 text-slate-500 shrink-0" />
           <input
@@ -247,7 +275,7 @@ export default function Alerts() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                {['Time', 'Severity', 'Category', 'Source IP', 'Destination IP', 'Score', 'Intel', 'Actions'].map(
+                {[...['Time', 'Severity', 'Category', 'Source IP', 'Destination IP', 'Score', 'Intel'], ...(isExclusive ? ['Assigned'] : []), 'Actions'].map(
                   (h) => (
                     <th
                       key={h}
@@ -262,14 +290,14 @@ export default function Alerts() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center">
+                  <td colSpan={isExclusive ? 9 : 8} className="px-5 py-12 text-center">
                     <Loader2 className="w-6 h-6 text-blue-400 animate-spin mx-auto mb-2" />
                     <span className="text-sm text-slate-500">Loading alerts...</span>
                   </td>
                 </tr>
               ) : filteredAlerts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-sm text-slate-500">
+                  <td colSpan={isExclusive ? 9 : 8} className="px-5 py-12 text-center text-sm text-slate-500">
                     No alerts found
                   </td>
                 </tr>
@@ -322,6 +350,38 @@ export default function Alerts() {
                         <span className="text-xs text-slate-600">Clean</span>
                       )}
                     </td>
+                    {isExclusive && (
+                      <td className="px-5 py-3">
+                        {alert.assigned_name ? (
+                          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                            <UserCheck className="w-3 h-3" />
+                            {alert.assigned_name}
+                          </span>
+                        ) : user?.is_team_leader ? (
+                          <select
+                            value=""
+                            onChange={async (e) => {
+                              const memberId = parseInt(e.target.value);
+                              const member = teamMembers.find((m) => m.id === memberId);
+                              if (member) {
+                                try {
+                                  await alertService.assignAlert(alert.id, memberId, `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.email);
+                                  setAlerts((prev) => prev.map((a) => a.id === alert.id ? { ...a, assigned_to: memberId, assigned_name: `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.email } : a));
+                                } catch {}
+                              }
+                            }}
+                            className="bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs text-slate-400 outline-none cursor-pointer appearance-none"
+                          >
+                            <option value="">Assign...</option>
+                            {teamMembers.map((m) => (
+                              <option key={m.id} value={m.id}>{m.first_name || m.email}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-xs text-slate-600">Unassigned</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         <button
