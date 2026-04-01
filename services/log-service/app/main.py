@@ -9,6 +9,7 @@ from app.routes.threat_intel import router as threat_intel_router
 from app.routes.blacklist import router as blacklist_router
 from app.routes.whitelist import router as whitelist_router
 from app.routes.quarantine import router as quarantine_router
+from app.routes.rules import router as rules_router
 
 
 @asynccontextmanager
@@ -37,6 +38,7 @@ app.include_router(threat_intel_router)
 app.include_router(blacklist_router)
 app.include_router(whitelist_router)
 app.include_router(quarantine_router)
+app.include_router(rules_router)
 
 
 @app.get("/health")

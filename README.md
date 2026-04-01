@@ -177,6 +177,24 @@ Quarantined alerts sit in a review queue. An admin can:
 
 This prevents false positives from auto-blocking legitimate traffic while still catching real threats.
 
+### Custom Detection Rules
+
+Users create "if-then" rules to detect threats based on their network's patterns. Three rule types:
+
+| Type | What it does | Example |
+|------|-------------|---------|
+| **Rate Limit** | Triggers when same IP exceeds alert count in a time window | >5 SQL_INJECTION from same IP in 5 min |
+| **Category Match** | Triggers on specific category + severity combo | Any CRITICAL MALWARE alert |
+| **Failed Login** | Triggers on brute force attempts from same IP | >10 BRUTE_FORCE in 10 min |
+
+Each rule defines **actions** to take when triggered:
+- Quarantine the alert
+- Auto-block the IP (add to blacklist)
+- Increase threat score by a configurable amount
+- Notify admin (placeholder)
+
+Rules run in **priority order** (highest first), and the first matching rule wins. Each rule tracks how many times it has triggered. Rules can be tested against recent alerts before enabling.
+
 ### Blacklist & Whitelist
 
 Users can maintain their own blacklist and whitelist to control how alerts are processed. During ingestion, every alert's source IP is checked in this order:
@@ -246,6 +264,11 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | POST | `/api/quarantine/{id}/release` | Release alert from quarantine |
 | POST | `/api/quarantine/{id}/block` | Confirm threat, block and blacklist IP |
 | DELETE | `/api/quarantine/{id}` | Remove from quarantine |
+| GET/POST | `/api/rules` | List/create detection rules |
+| PUT | `/api/rules/{id}` | Update a rule |
+| DELETE | `/api/rules/{id}` | Delete a rule |
+| POST | `/api/rules/{id}/toggle` | Enable/disable a rule |
+| POST | `/api/rules/{id}/test` | Test rule against recent alerts |
 
 ## Data Models
 
@@ -267,7 +290,10 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 - Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status` (NONE/QUARANTINED/RELEASED/BLOCKED), `quarantined_at`, `reviewed_by`, `review_notes`, `detected_at`, `created_at`
 
 ### BlacklistEntry / WhitelistEntry (Log Service)
-- Fields: `id` (UUID), `entry_type` (IP/DOMAIN/CIDR), `value`, `reason`, `added_by` (manual/threatfox/bulk_import), `user_id`, `block_count`/`trust_count`, `created_at`
+- Fields: `id` (UUID), `entry_type` (IP/DOMAIN/CIDR), `value`, `reason`, `added_by` (manual/threatfox/bulk_import/rule), `user_id`, `team_id`, `block_count`/`trust_count`, `created_at`
+
+### Rule (Log Service)
+- Fields: `id` (UUID), `name`, `description`, `rule_type` (RATE_LIMIT/CATEGORY_MATCH/FAILED_LOGIN), `conditions` (JSONB), `actions` (JSONB), `priority` (1–10), `enabled`, `trigger_count`, `user_id`, `team_id`, `created_at`
 
 ## Getting Started
 
@@ -340,6 +366,10 @@ Frontend `frontend/.env`:
 - Implemented EXCLUSIVE team workspace — all team members share alerts, blacklists, whitelists, and quarantine
 - Added `tier` and `team_id` to JWT tokens for team-scoped queries
 - FREE/PREMIUM users scoped by `user_id`, EXCLUSIVE users scoped by `team_id`
+- Built custom rule engine with 3 rule types (Rate Limit, Category Match, Failed Login)
+- Rule builder UI with condition/action config, priority, enable/disable toggle
+- Rules evaluated during ingestion — first matching rule (by priority) wins
+- Rule test endpoint to dry-run against recent alerts
 - Created test script sending 10 mock alerts across all IDS formats — verified end-to-end ingestion
 
 ## Design

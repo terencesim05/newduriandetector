@@ -18,6 +18,7 @@ from app.services.scoring import calculate_threat_score
 from app.utils.threat_intel import check_ip_reputation
 from app.utils.matcher import matches_entry
 from app.utils.scoping import apply_scope
+from app.utils.rule_engine import evaluate_rules
 
 router = APIRouter(prefix="/api/logs", tags=["ingestion"])
 
@@ -156,6 +157,13 @@ async def ingest_alerts(
         rows.append(row)
 
     db.add_all(rows)
+    await db.flush()  # persist rows so rule engine COUNT queries include them
+
+    # --- Rule Engine: evaluate custom rules ---
+    for row in rows:
+        if not row.is_whitelisted and not row.is_blocked:
+            await evaluate_rules(row, user, db)
+
     await db.commit()
 
     return IngestResponse(ingested=len(rows), message="Alerts ingested successfully")

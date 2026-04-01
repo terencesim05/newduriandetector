@@ -94,4 +94,30 @@ export const alertService = {
     const response = await logApi.delete(`/api/quarantine/${id}`);
     return response.data;
   },
+
+  // Rules
+  async getRules() {
+    const response = await logApi.get('/api/rules');
+    return response.data;
+  },
+  async createRule(rule) {
+    const response = await logApi.post('/api/rules', rule);
+    return response.data;
+  },
+  async updateRule(id, data) {
+    const response = await logApi.put(`/api/rules/${id}`, data);
+    return response.data;
+  },
+  async deleteRule(id) {
+    const response = await logApi.delete(`/api/rules/${id}`);
+    return response.data;
+  },
+  async toggleRule(id) {
+    const response = await logApi.post(`/api/rules/${id}/toggle`);
+    return response.data;
+  },
+  async testRule(id) {
+    const response = await logApi.post(`/api/rules/${id}/test`);
+    return response.data;
+  },
 };
