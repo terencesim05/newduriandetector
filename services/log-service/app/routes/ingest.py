@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.auth import get_current_user
+from app.auth import get_current_user, CurrentUser
 from app.models.alert import Alert, QuarantineStatus
 from app.models.lists import BlacklistEntry, WhitelistEntry
 from app.schemas.alert import IngestRequest, IngestResponse, AlertIngest
@@ -17,6 +17,7 @@ from app.services.normalizer import (
 from app.services.scoring import calculate_threat_score
 from app.utils.threat_intel import check_ip_reputation
 from app.utils.matcher import matches_entry
+from app.utils.scoping import apply_scope
 
 router = APIRouter(prefix="/api/logs", tags=["ingestion"])
 
@@ -24,8 +25,9 @@ QUARANTINE_THRESHOLD = 0.7
 AUTO_BLOCK_THRESHOLD = 0.9
 
 
-async def _load_list_entries(db: AsyncSession, model, user_id: int):
-    result = await db.execute(select(model).where(model.user_id == user_id))
+async def _load_list_entries(db: AsyncSession, model, user: CurrentUser):
+    q = apply_scope(select(model), model, user)
+    result = await db.execute(q)
     return result.scalars().all()
 
 
@@ -39,7 +41,7 @@ def _check_list(ip: str, entries) -> object | None:
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest_alerts(
     body: IngestRequest,
-    user_id: int = Depends(get_current_user),
+    user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     normalised: list[AlertIngest] = []
@@ -58,8 +60,8 @@ async def ingest_alerts(
     if not normalised:
         raise HTTPException(status_code=400, detail="No alerts provided")
 
-    whitelist = await _load_list_entries(db, WhitelistEntry, user_id)
-    blacklist = await _load_list_entries(db, BlacklistEntry, user_id)
+    whitelist = await _load_list_entries(db, WhitelistEntry, user)
+    blacklist = await _load_list_entries(db, BlacklistEntry, user)
 
     rows: list[Alert] = []
     for alert in normalised:
@@ -103,7 +105,8 @@ async def ingest_alerts(
                             value=alert.source_ip,
                             reason=f"ThreatFox: {threat_data.get('malware', 'unknown')} ({threat_data.get('threat_type', 'unknown')})",
                             added_by="threatfox",
-                            user_id=user_id,
+                            user_id=user.user_id,
+                            team_id=user.team_id,
                         )
                         db.add(new_bl)
                         blacklist.append(new_bl)
@@ -120,7 +123,8 @@ async def ingest_alerts(
                                 value=alert.source_ip,
                                 reason=f"Auto-blocked: threat_score {score} >= {AUTO_BLOCK_THRESHOLD}",
                                 added_by="auto",
-                                user_id=user_id,
+                                user_id=user.user_id,
+                                team_id=user.team_id,
                             )
                             db.add(new_bl)
                             blacklist.append(new_bl)
@@ -139,8 +143,8 @@ async def ingest_alerts(
             threat_score=round(score, 3),
             ids_source=alert.ids_source,
             raw_data=alert.raw_data,
-            user_id=user_id,
-            team_id=alert.team_id,
+            user_id=user.user_id,
+            team_id=user.team_id,
             detected_at=alert.detected_at,
             threat_intel=threat_intel,
             flagged_by_threatfox=flagged,

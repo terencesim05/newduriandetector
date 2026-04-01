@@ -5,6 +5,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 
 
+def _add_custom_claims(refresh, user):
+    """Add tier and team_id to both access and refresh tokens."""
+    refresh["tier"] = user.tier or "FREE"
+    refresh["team_id"] = str(user.team_id) if user.team_id else None
+    return refresh
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -43,7 +50,7 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid credentials.')
         if not user.is_active:
             raise serializers.ValidationError('User account is disabled.')
-        refresh = RefreshToken.for_user(user)
+        refresh = _add_custom_claims(RefreshToken.for_user(user), user)
         return {
             'user': UserSerializer(user).data,
             'tokens': {

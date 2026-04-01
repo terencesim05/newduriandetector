@@ -15,7 +15,7 @@ BASE = "http://localhost:8001"
 # Build a dummy HS256 JWT when none is supplied
 def _make_dummy_token() -> str:
     from jose import jwt
-    payload = {"user_id": 1, "sub": "testuser"}
+    payload = {"user_id": 1, "sub": "testuser", "tier": "FREE", "team_id": None}
     return jwt.encode(payload, "abasdadasd1234asd", algorithm="HS256")
 
 

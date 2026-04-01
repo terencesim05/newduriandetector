@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import User
-from .serializers import LoginSerializer, RegisterSerializer, UserSerializer
+from .serializers import LoginSerializer, RegisterSerializer, UserSerializer, _add_custom_claims
 
 
 def _generate_pin(length=6):
@@ -78,7 +78,7 @@ class AuthViewSet(viewsets.GenericViewSet):
                 user.team = team
                 user.save(update_fields=['team'])
 
-        refresh = RefreshToken.for_user(user)
+        refresh = _add_custom_claims(RefreshToken.for_user(user), user)
         return Response({
             'user': UserSerializer(user).data,
             'tokens': {

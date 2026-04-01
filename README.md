@@ -73,6 +73,18 @@ newduriandetector/
 - **PIN Management**: Leader can copy PIN to clipboard or regenerate it anytime
 - **Access Control**: Only leader can regenerate PIN and remove members
 - **Sidebar**: Teams nav link hidden for Free/Premium users
+- **Shared workspace**: All team members see the same alerts, blacklist, whitelist, and quarantine queue. One member blocks an IP → all members see it immediately
+
+### Data Scoping (Multi-Tenant)
+
+How data is isolated depends on the user's tier:
+
+| Tier | Scoped By | Meaning |
+|------|-----------|---------|
+| FREE / PREMIUM | `user_id` | Each user sees only their own data |
+| EXCLUSIVE | `team_id` | All team members share the same data |
+
+This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flagging. The JWT token carries `tier` and `team_id` so the log service knows how to scope every query.
 
 ### Registration Flow
 
@@ -325,6 +337,9 @@ Frontend `frontend/.env`:
 - Status badges on alerts: TRUSTED (green), BLOCKED (red), QUARANTINED (yellow), FLAGGED (orange), Clean
 - Connected Alerts page to live backend data (replaced mock data)
 - Added `.env` to `.gitignore` to protect credentials
+- Implemented EXCLUSIVE team workspace — all team members share alerts, blacklists, whitelists, and quarantine
+- Added `tier` and `team_id` to JWT tokens for team-scoped queries
+- FREE/PREMIUM users scoped by `user_id`, EXCLUSIVE users scoped by `team_id`
 - Created test script sending 10 mock alerts across all IDS formats — verified end-to-end ingestion
 
 ## Design

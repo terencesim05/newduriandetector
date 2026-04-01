@@ -1,7 +1,7 @@
 import logging
 import httpx
 from fastapi import APIRouter, Depends, Query
-from app.auth import get_current_user
+from app.auth import get_current_user, CurrentUser
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ THREATFOX_API = "https://threatfox-api.abuse.ch/api/v1/"
 async def get_recent_iocs(
     days: int = Query(7, ge=1, le=30),
     limit: int = Query(100, ge=1, le=500),
-    user_id: int = Depends(get_current_user),
+    user: CurrentUser = Depends(get_current_user),
 ):
     """Fetch the latest IOCs from ThreatFox."""
     if not settings.THREATFOX_AUTH_KEY:
@@ -61,7 +61,7 @@ async def get_recent_iocs(
 @router.get("/search")
 async def search_ioc(
     term: str = Query(..., min_length=1),
-    user_id: int = Depends(get_current_user),
+    user: CurrentUser = Depends(get_current_user),
 ):
     """Search ThreatFox for a specific IOC (IP, hash, domain)."""
     if not settings.THREATFOX_AUTH_KEY:

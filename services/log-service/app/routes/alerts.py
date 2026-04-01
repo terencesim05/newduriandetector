@@ -4,9 +4,10 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.auth import get_current_user
+from app.auth import get_current_user, CurrentUser
 from app.models.alert import Alert, Severity, Category
 from app.schemas.alert import AlertOut, AlertListResponse
+from app.utils.scoping import apply_scope
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
@@ -19,10 +20,10 @@ async def list_alerts(
     end_date: datetime | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    user_id: int = Depends(get_current_user),
+    user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    base = select(Alert).where(Alert.user_id == user_id)
+    base = apply_scope(select(Alert), Alert, user)
 
     if severity:
         base = base.where(Alert.severity == severity)
@@ -33,11 +34,9 @@ async def list_alerts(
     if end_date:
         base = base.where(Alert.detected_at <= end_date)
 
-    # Total count
     count_q = select(func.count()).select_from(base.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
-    # Paginated results
     offset = (page - 1) * page_size
     rows = (
         await db.execute(

@@ -22,6 +22,7 @@ class BlacklistOut(BaseModel):
     reason: str | None
     added_by: str
     user_id: int
+    team_id: uuid.UUID | None
     block_count: int
     created_at: datetime
 
@@ -35,6 +36,7 @@ class WhitelistOut(BaseModel):
     reason: str | None
     added_by: str
     user_id: int
+    team_id: uuid.UUID | None
     trust_count: int
     created_at: datetime
 

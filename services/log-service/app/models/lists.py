@@ -2,7 +2,7 @@ import uuid
 import enum
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, BigInteger, Integer, DateTime, Enum, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.database import Base
 
 
@@ -21,6 +21,7 @@ class BlacklistEntry(Base):
     reason = Column(Text, nullable=True)
     added_by = Column(String(50), nullable=False, default="manual")  # manual, threatfox, auto
     user_id = Column(BigInteger, nullable=False)
+    team_id = Column(UUID(as_uuid=True), nullable=True)
     block_count = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
@@ -34,5 +35,6 @@ class WhitelistEntry(Base):
     reason = Column(Text, nullable=True)
     added_by = Column(String(50), nullable=False, default="manual")
     user_id = Column(BigInteger, nullable=False)
+    team_id = Column(UUID(as_uuid=True), nullable=True)
     trust_count = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
