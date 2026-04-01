@@ -1,10 +1,11 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.auth import get_current_user
-from app.models.alert import Alert
+from app.models.alert import Alert, QuarantineStatus
 from app.models.lists import BlacklistEntry, WhitelistEntry
 from app.schemas.alert import IngestRequest, IngestResponse, AlertIngest
 from app.services.normalizer import (
@@ -19,6 +20,9 @@ from app.utils.matcher import matches_entry
 
 router = APIRouter(prefix="/api/logs", tags=["ingestion"])
 
+QUARANTINE_THRESHOLD = 0.7
+AUTO_BLOCK_THRESHOLD = 0.9
+
 
 async def _load_list_entries(db: AsyncSession, model, user_id: int):
     result = await db.execute(select(model).where(model.user_id == user_id))
@@ -26,7 +30,6 @@ async def _load_list_entries(db: AsyncSession, model, user_id: int):
 
 
 def _check_list(ip: str, entries) -> object | None:
-    """Return the first matching list entry, or None."""
     for entry in entries:
         if matches_entry(ip, entry.entry_type.value, entry.value):
             return entry
@@ -55,7 +58,6 @@ async def ingest_alerts(
     if not normalised:
         raise HTTPException(status_code=400, detail="No alerts provided")
 
-    # Load user's whitelist and blacklist once
     whitelist = await _load_list_entries(db, WhitelistEntry, user_id)
     blacklist = await _load_list_entries(db, BlacklistEntry, user_id)
 
@@ -66,13 +68,14 @@ async def ingest_alerts(
         is_blocked = False
         flagged = "false"
         threat_intel = None
+        q_status = QuarantineStatus.NONE
+        q_at = None
 
         # --- Priority 1: Whitelist ---
         wl_match = _check_list(alert.source_ip, whitelist)
         if wl_match:
             is_whitelisted = True
             score = 0.0
-            # Bump trust count
             wl_match.trust_count += 1
         else:
             # --- Priority 2: Blacklist ---
@@ -94,7 +97,6 @@ async def ingest_alerts(
                     raw["threatfox"] = threat_data
                     alert.raw_data = raw
 
-                    # Auto-blacklist: add to blacklist if not already there
                     if not _check_list(alert.source_ip, blacklist):
                         new_bl = BlacklistEntry(
                             entry_type="IP",
@@ -104,8 +106,27 @@ async def ingest_alerts(
                             user_id=user_id,
                         )
                         db.add(new_bl)
-                        blacklist.append(new_bl)  # update in-memory list
+                        blacklist.append(new_bl)
                     is_blocked = True
+
+                # --- Priority 4: Score-based decision ---
+                if not is_blocked:
+                    score = round(score, 3)
+                    if score >= AUTO_BLOCK_THRESHOLD:
+                        is_blocked = True
+                        if not _check_list(alert.source_ip, blacklist):
+                            new_bl = BlacklistEntry(
+                                entry_type="IP",
+                                value=alert.source_ip,
+                                reason=f"Auto-blocked: threat_score {score} >= {AUTO_BLOCK_THRESHOLD}",
+                                added_by="auto",
+                                user_id=user_id,
+                            )
+                            db.add(new_bl)
+                            blacklist.append(new_bl)
+                    elif score >= QUARANTINE_THRESHOLD:
+                        q_status = QuarantineStatus.QUARANTINED
+                        q_at = datetime.now(timezone.utc)
 
         row = Alert(
             severity=alert.severity,
@@ -125,6 +146,8 @@ async def ingest_alerts(
             flagged_by_threatfox=flagged,
             is_whitelisted=is_whitelisted,
             is_blocked=is_blocked,
+            quarantine_status=q_status,
+            quarantined_at=q_at,
         )
         rows.append(row)
 

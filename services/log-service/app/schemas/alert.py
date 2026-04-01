@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 from pydantic import BaseModel, Field, field_validator
-from app.models.alert import Severity, Category, IDSSource
+from app.models.alert import Severity, Category, IDSSource, QuarantineStatus
 
 
 # --- Ingest schemas (accept various IDS formats) ---
@@ -113,6 +113,10 @@ class AlertOut(BaseModel):
     flagged_by_threatfox: str
     is_whitelisted: bool
     is_blocked: bool
+    quarantine_status: QuarantineStatus
+    quarantined_at: datetime | None
+    reviewed_by: str | None
+    review_notes: str | None
     detected_at: datetime
     created_at: datetime
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Loader2, ShieldAlert, ShieldBan, ShieldCheck, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Loader2, ShieldAlert, ShieldBan, ShieldCheck, ShieldQuestion, X } from 'lucide-react';
 import { alertService } from '../services/alertService';
 
 const severityColors = {
@@ -303,6 +303,11 @@ export default function Alerts() {
                         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-red-500/15 text-red-400 border-red-500/30">
                           <ShieldBan className="w-3 h-3" />
                           BLOCKED
+                        </span>
+                      ) : alert.quarantine_status === 'QUARANTINED' ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-yellow-500/15 text-yellow-400 border-yellow-500/30">
+                          <ShieldQuestion className="w-3 h-3" />
+                          QUARANTINED
                         </span>
                       ) : alert.flagged_by_threatfox === 'true' ? (
                         <button

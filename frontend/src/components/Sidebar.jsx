@@ -11,12 +11,14 @@ import {
   ShieldAlert,
   ShieldBan,
   ShieldCheck,
+  ShieldQuestion,
   X,
 } from 'lucide-react';
 
 const baseNavItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/alerts', label: 'Alerts', icon: Bell },
+  { to: '/quarantine', label: 'Quarantine', icon: ShieldQuestion },
   { to: '/threat-intel', label: 'Threat Intel', icon: ShieldAlert },
   { to: '/blacklist', label: 'Blacklist', icon: ShieldBan },
   { to: '/whitelist', label: 'Whitelist', icon: ShieldCheck },

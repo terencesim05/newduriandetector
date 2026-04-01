@@ -34,6 +34,13 @@ class IDSSource(str, enum.Enum):
     KISMET = "kismet"
 
 
+class QuarantineStatus(str, enum.Enum):
+    NONE = "NONE"
+    QUARANTINED = "QUARANTINED"
+    RELEASED = "RELEASED"
+    BLOCKED = "BLOCKED"
+
+
 class Alert(Base):
     __tablename__ = "alerts"
 
@@ -55,4 +62,8 @@ class Alert(Base):
     flagged_by_threatfox = Column(String(10), nullable=False, default="false")
     is_whitelisted = Column(Boolean, nullable=False, default=False)
     is_blocked = Column(Boolean, nullable=False, default=False)
+    quarantine_status = Column(Enum(QuarantineStatus, name="quarantine_status", create_constraint=False), nullable=False, default=QuarantineStatus.NONE)
+    quarantined_at = Column(DateTime(timezone=True), nullable=True)
+    reviewed_by = Column(String(100), nullable=True)
+    review_notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

@@ -149,6 +149,22 @@ newduriandetector/
 Formula: `score = (0.6 × severity) + (0.4 × category)`
 If ThreatFox flags the source IP, score is boosted to 0.9–1.0 based on confidence level.
 
+### Quarantine System
+
+Alerts are automatically triaged based on threat score:
+
+| Score | Action | What Happens |
+|-------|--------|--------------|
+| >= 0.9 | **Auto-block** | `is_blocked=True`, IP added to blacklist immediately |
+| 0.7 – 0.9 | **Quarantine** | Held for human review before any action |
+| < 0.7 | **Allow** | Logged normally, no intervention needed |
+
+Quarantined alerts sit in a review queue. An admin can:
+- **Release** — mark as safe (false positive), alert stays logged
+- **Block** — confirm the threat, sets score to 1.0, IP auto-added to blacklist
+
+This prevents false positives from auto-blocking legitimate traffic while still catching real threats.
+
 ### Blacklist & Whitelist
 
 Users can maintain their own blacklist and whitelist to control how alerts are processed. During ingestion, every alert's source IP is checked in this order:
@@ -213,6 +229,11 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | POST | `/api/blacklist/bulk` | Bulk import blacklist from CSV |
 | GET/POST/DELETE | `/api/whitelist` | Manage whitelist entries |
 | POST | `/api/whitelist/bulk` | Bulk import whitelist from CSV |
+| GET | `/api/quarantine` | List quarantined alerts (filterable by status) |
+| GET | `/api/quarantine/stats` | Pending/released/blocked counts |
+| POST | `/api/quarantine/{id}/release` | Release alert from quarantine |
+| POST | `/api/quarantine/{id}/block` | Confirm threat, block and blacklist IP |
+| DELETE | `/api/quarantine/{id}` | Remove from quarantine |
 
 ## Data Models
 
@@ -231,7 +252,7 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 - Fields: `id` (UUID), `user` (FK), `plan` (FK), `status`, `start_date`, `end_date`, `auto_renew`
 
 ### Alert (Log Service)
-- Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `detected_at`, `created_at`
+- Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status` (NONE/QUARANTINED/RELEASED/BLOCKED), `quarantined_at`, `reviewed_by`, `review_notes`, `detected_at`, `created_at`
 
 ### BlacklistEntry / WhitelistEntry (Log Service)
 - Fields: `id` (UUID), `entry_type` (IP/DOMAIN/CIDR), `value`, `reason`, `added_by` (manual/threatfox/bulk_import), `user_id`, `block_count`/`trust_count`, `created_at`
@@ -286,7 +307,7 @@ Frontend `frontend/.env`:
 - Added placeholder pages for Alerts, Incidents, Settings, Teams
 - Built team management for EXCLUSIVE tier — team creation, leader role, PIN-based invite system
 
-### April 1 — Log Ingestion, Threat Intelligence, Blacklist/Whitelist
+### April 1 — Log Ingestion, Threat Intelligence, Blacklist/Whitelist, Quarantine
 - Created FastAPI log ingestion microservice at `services/log-service/` (port 8001)
 - Implemented multi-IDS alert normalisation — accepts raw alerts from Suricata, Zeek, Snort, and Kismet and converts to unified schema
 - Added automatic threat scoring (0.0–1.0) based on severity + category weights
@@ -299,7 +320,9 @@ Frontend `frontend/.env`:
 - CIDR range support (e.g. blocking `10.0.0.0/8` blocks all 10.x.x.x IPs)
 - Bulk CSV import for both lists
 - Quick actions on Alerts page: "Block IP" and "Trust IP" buttons per alert row
-- Status badges on alerts: TRUSTED (green), BLOCKED (red), FLAGGED (orange), Clean
+- Built quarantine system — alerts scoring 0.7–0.9 held for review, 0.9+ auto-blocked
+- Quarantine page with stats, filter by status, release/block actions per alert
+- Status badges on alerts: TRUSTED (green), BLOCKED (red), QUARANTINED (yellow), FLAGGED (orange), Clean
 - Connected Alerts page to live backend data (replaced mock data)
 - Added `.env` to `.gitignore` to protect credentials
 - Created test script sending 10 mock alerts across all IDS formats — verified end-to-end ingestion

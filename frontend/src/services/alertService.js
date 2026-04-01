@@ -70,4 +70,28 @@ export const alertService = {
     const response = await logApi.delete(`/api/whitelist/${id}`);
     return response.data;
   },
+
+  // Quarantine
+  async getQuarantined(status) {
+    const params = {};
+    if (status && status !== 'All') params.status = status;
+    const response = await logApi.get('/api/quarantine', { params });
+    return response.data;
+  },
+  async getQuarantineStats() {
+    const response = await logApi.get('/api/quarantine/stats');
+    return response.data;
+  },
+  async releaseFromQuarantine(id, notes) {
+    const response = await logApi.post(`/api/quarantine/${id}/release`, { notes });
+    return response.data;
+  },
+  async blockFromQuarantine(id, notes) {
+    const response = await logApi.post(`/api/quarantine/${id}/block`, { notes });
+    return response.data;
+  },
+  async removeFromQuarantine(id) {
+    const response = await logApi.delete(`/api/quarantine/${id}`);
+    return response.data;
+  },
 };
