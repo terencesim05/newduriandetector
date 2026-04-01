@@ -8,12 +8,18 @@ import {
   Settings,
   LogOut,
   Shield,
+  ShieldAlert,
+  ShieldBan,
+  ShieldCheck,
   X,
 } from 'lucide-react';
 
 const baseNavItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/alerts', label: 'Alerts', icon: Bell },
+  { to: '/threat-intel', label: 'Threat Intel', icon: ShieldAlert },
+  { to: '/blacklist', label: 'Blacklist', icon: ShieldBan },
+  { to: '/whitelist', label: 'Whitelist', icon: ShieldCheck },
   { to: '/incidents', label: 'Incidents', icon: AlertTriangle },
   { to: '/teams', label: 'Teams', icon: Users, exclusiveOnly: true },
   { to: '/settings', label: 'Settings', icon: Settings },

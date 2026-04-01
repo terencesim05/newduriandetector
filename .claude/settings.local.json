@@ -7,7 +7,19 @@
       "Bash(xargs ls:*)",
       "Bash(claude usage:*)",
       "Bash(py manage.py dbshell -c \"SELECT column_name FROM information_schema.columns WHERE table_name = ''teams'';\")",
-      "Bash(py -c \":*)"
+      "Bash(py -c \":*)",
+      "Bash(pip install:*)",
+      "Bash(where python:*)",
+      "Bash(python3 -m pip install -r requirements.txt)",
+      "Bash(ls /c/Python*/python.exe)",
+      "Read(//c/Users/Terence01/AppData/Local/Programs/**)",
+      "Bash(/c/Users/Terence01/AppData/Local/Python/bin/python.exe --version)",
+      "Bash(/c/Users/Terence01/AppData/Local/Python/bin/python.exe -m pip install -r requirements.txt)",
+      "Bash(/c/Users/Terence01/AppData/Local/Python/bin/python.exe test_ingestion.py)",
+      "Bash(/c/Users/Terence01/AppData/Local/Python/bin/python.exe -c \":*)",
+      "Bash(pkill -f \"uvicorn app.main:app\")",
+      "Bash(curl -v -X POST https://threatfox-api.abuse.ch/api/v1/ -H \"Content-Type: application/json\" -d \"{\"\"query\"\": \"\"search_ioc\"\", \"\"search_term\"\": \"\"194.26.135.89\"\"}\")",
+      "Bash(curl -s https://threatfox.abuse.ch/api/)"
     ]
   }
 }

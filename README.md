@@ -5,8 +5,10 @@ A threat detection aggregation and management platform that consolidates securit
 ## Tech Stack
 
 - **Frontend**: React 19 + Vite, Tailwind CSS, Lucide React icons, Axios, React Router v7
-- **Backend**: Django 6 + Django REST Framework, SimpleJWT authentication
+- **Auth Service**: Django 6 + Django REST Framework, SimpleJWT authentication
+- **Log Service**: FastAPI, SQLAlchemy (async + asyncpg), Pydantic
 - **Database**: PostgreSQL (Supabase)
+- **Threat Intelligence**: ThreatFox API (abuse.ch)
 - **3D Visualization**: Three.js / React Three Fiber (landing page globe)
 
 ## Project Structure
@@ -20,12 +22,19 @@ newduriandetector/
 │       ├── context/            # AuthContext (JWT state management)
 │       ├── layouts/            # DashboardLayout wrapper
 │       ├── pages/              # All page components
-│       └── services/           # API service layer (authService)
+│       └── services/           # API service layer (authService, alertService)
 └── services/
-    └── auth-service/           # Django backend
-        ├── users/              # User model, auth endpoints
-        ├── teams/              # Team model, PIN system
-        └── subscriptions/      # Plans and subscriptions
+    ├── auth-service/           # Django backend (port 8000)
+    │   ├── users/              # User model, auth endpoints
+    │   ├── teams/              # Team model, PIN system
+    │   └── subscriptions/      # Plans and subscriptions
+    └── log-service/            # FastAPI backend (port 8001)
+        └── app/
+            ├── models/         # Alert model (SQLAlchemy)
+            ├── schemas/        # Pydantic validation schemas
+            ├── routes/         # Ingest + query endpoints
+            ├── services/       # Normalizer, threat scoring
+            └── utils/          # ThreatFox integration
 ```
 
 ## Features
@@ -84,10 +93,14 @@ newduriandetector/
 
 ### Alerts Page
 
-- Filter by severity (Critical/High/Medium/Low) and category (SQL Injection, DDoS, Malware, Brute Force, XSS)
-- Search bar
-- Alert table with severity badges (color-coded) and action buttons
-- Mock pagination
+- **Live data** from the FastAPI log service (no more mock data)
+- Filter by severity (Critical/High/Medium/Low) and category (11 categories)
+- Search by IP address or category
+- Alert table with severity badges, threat score, and ThreatFox intel column
+- **ThreatFox badge**: red "FLAGGED" badge on alerts where the source IP is a known threat
+- **Threat detail modal**: click any flagged alert to see malware family, threat type, confidence level, tags, first/last seen dates, and reference URL
+- Server-side pagination with working page controls
+- Loading spinner and error handling
 
 ### Incidents Page
 
@@ -111,6 +124,53 @@ newduriandetector/
 - **Account**: Current tier badge with upgrade buttons
 - **Security**: Change password button, 2FA toggle (placeholder)
 - **Notifications**: Email notifications toggle, alert severity threshold slider
+
+### Log Ingestion Service
+
+- **Multi-IDS support**: accepts alerts from Suricata (EVE JSON), Zeek (notice logs), Snort, and Kismet
+- **Alert normalisation**: converts each IDS format into a unified schema
+- **Threat scoring**: automatic 0.0–1.0 score per alert using weighted formula (60% severity + 40% category)
+- **ThreatFox integration**: every ingested alert's source IP is checked against the ThreatFox threat intelligence database
+  - Known malicious IPs get flagged, score boosted to 0.9+, and enriched with malware family/threat type/confidence data
+  - Results cached 24 hours in memory to avoid redundant API calls
+  - Private/RFC1918 IPs are skipped
+- **Multi-tenant**: alerts are tagged with the authenticated user's ID; users only see their own data
+- **Async**: built on FastAPI + asyncpg for non-blocking database writes
+
+### Threat Scoring
+
+| Severity | Weight | | Category | Weight |
+|----------|--------|-|----------|--------|
+| LOW | 0.10 | | SQL_INJECTION | 0.85 |
+| MEDIUM | 0.30 | | COMMAND_INJECTION | 0.85 |
+| HIGH | 0.60 | | PRIVILEGE_ESCALATION | 0.80 |
+| CRITICAL | 0.90 | | MALWARE | 0.75 |
+
+Formula: `score = (0.6 × severity) + (0.4 × category)`
+If ThreatFox flags the source IP, score is boosted to 0.9–1.0 based on confidence level.
+
+### Blacklist & Whitelist
+
+Users can maintain their own blacklist and whitelist to control how alerts are processed. During ingestion, every alert's source IP is checked in this order:
+
+1. **Whitelist** (highest priority) — if matched, `threat_score = 0`, all other checks skipped
+2. **Blacklist** — if matched, `threat_score = 1.0`, alert marked as blocked
+3. **ThreatFox** — if matched, IP auto-added to blacklist, alert marked as blocked
+4. **Normal** — standard scoring applies
+
+Each list supports three entry types:
+- **IP** — exact match (e.g. `1.2.3.4`)
+- **CIDR** — range match (e.g. `192.168.0.0/16`)
+- **DOMAIN** — domain match
+
+Entries track how many times they've been matched (`block_count` / `trust_count`). Lists are multi-tenant — each user manages their own.
+
+### Threat Intelligence Feed
+
+The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compromise) published on ThreatFox. Users can:
+- Browse recent IOCs (configurable: last 1–30 days)
+- Search for specific IPs, domains, or hashes
+- View malware family, threat type, confidence level, tags, and reporter info
 
 ## API Endpoints
 
@@ -140,6 +200,20 @@ newduriandetector/
 | GET | `/my-subscription/` | Get user's active subscription |
 | POST | `/upgrade/` | Upgrade subscription plan |
 
+### Log Service (port 8001)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| POST | `/api/logs/ingest` | Ingest alerts (supports all IDS formats) |
+| GET | `/api/alerts` | List alerts (filterable, paginated) |
+| GET | `/api/threat-intel/recent` | Live ThreatFox IOC feed |
+| GET | `/api/threat-intel/search` | Search ThreatFox by IP/hash/domain |
+| GET/POST/DELETE | `/api/blacklist` | Manage blacklist entries |
+| POST | `/api/blacklist/bulk` | Bulk import blacklist from CSV |
+| GET/POST/DELETE | `/api/whitelist` | Manage whitelist entries |
+| POST | `/api/whitelist/bulk` | Bulk import whitelist from CSV |
+
 ## Data Models
 
 ### User
@@ -156,9 +230,15 @@ newduriandetector/
 ### Subscription
 - Fields: `id` (UUID), `user` (FK), `plan` (FK), `status`, `start_date`, `end_date`, `auto_renew`
 
+### Alert (Log Service)
+- Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `detected_at`, `created_at`
+
+### BlacklistEntry / WhitelistEntry (Log Service)
+- Fields: `id` (UUID), `entry_type` (IP/DOMAIN/CIDR), `value`, `reason`, `added_by` (manual/threatfox/bulk_import), `user_id`, `block_count`/`trust_count`, `created_at`
+
 ## Getting Started
 
-### Backend
+### 1. Auth Service (port 8000)
 
 ```bash
 cd services/auth-service
@@ -167,7 +247,15 @@ py manage.py migrate
 py manage.py runserver
 ```
 
-### Frontend
+### 2. Log Service (port 8001)
+
+```bash
+cd services/log-service
+pip install -r requirements.txt
+py -m uvicorn app.main:app --reload --port 8001
+```
+
+### 3. Frontend (port 5173)
 
 ```bash
 cd frontend
@@ -177,13 +265,44 @@ npm run dev
 
 ### Environment Variables
 
-**Backend** (`.env`):
-- `DATABASE_URL` - PostgreSQL connection string
-- `SECRET_KEY` - Django secret key
+Root `.env` (shared by both services):
+- `DATABASE_URL` — PostgreSQL connection string (Supabase)
+- `JWT_SECRET_KEY` — shared JWT signing key
+- `THREATFOX_AUTH_KEY` — free API key from https://auth.abuse.ch/
 
-**Frontend** (`frontend/.env`):
-- `VITE_AUTH_API_URL` - Auth service URL (default: `http://localhost:8000`)
-- `VITE_LOG_API_URL` - Log service URL (default: `http://localhost:8001`)
+Frontend `frontend/.env`:
+- `VITE_AUTH_API_URL` — Auth service URL (default: `http://localhost:8000`)
+- `VITE_LOG_API_URL` — Log service URL (default: `http://localhost:8001`)
+
+## Development Log
+
+### March 29 — Project Init
+- Created GitHub repository
+
+### March 31 — Core App Build
+- Scaffolded React + Vite frontend with landing page, login/signup pages, 3D globe component
+- Built Django REST auth service with JWT auth, user model, subscription tiers (FREE/PRO/EXCLUSIVE)
+- Implemented full signup flow, protected routes, dashboard layout with sidebar/navbar
+- Added placeholder pages for Alerts, Incidents, Settings, Teams
+- Built team management for EXCLUSIVE tier — team creation, leader role, PIN-based invite system
+
+### April 1 — Log Ingestion, Threat Intelligence, Blacklist/Whitelist
+- Created FastAPI log ingestion microservice at `services/log-service/` (port 8001)
+- Implemented multi-IDS alert normalisation — accepts raw alerts from Suricata, Zeek, Snort, and Kismet and converts to unified schema
+- Added automatic threat scoring (0.0–1.0) based on severity + category weights
+- Async PostgreSQL storage to Supabase via SQLAlchemy + asyncpg
+- Built paginated, filtered alert query API with multi-tenant isolation (users only see own alerts)
+- Integrated ThreatFox API for automatic IP reputation checking on every ingested alert
+- Built Threat Intel page — live feed of latest IOCs from ThreatFox with search, time range filter, and tag summary
+- Built blacklist/whitelist system with priority-based ingestion logic (whitelist > blacklist > ThreatFox > normal)
+- Auto-blacklist: IPs flagged by ThreatFox are automatically added to the user's blacklist
+- CIDR range support (e.g. blocking `10.0.0.0/8` blocks all 10.x.x.x IPs)
+- Bulk CSV import for both lists
+- Quick actions on Alerts page: "Block IP" and "Trust IP" buttons per alert row
+- Status badges on alerts: TRUSTED (green), BLOCKED (red), FLAGGED (orange), Clean
+- Connected Alerts page to live backend data (replaced mock data)
+- Added `.env` to `.gitignore` to protect credentials
+- Created test script sending 10 mock alerts across all IDS formats — verified end-to-end ingestion
 
 ## Design
 
