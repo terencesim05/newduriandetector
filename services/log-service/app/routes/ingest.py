@@ -19,6 +19,9 @@ from app.utils.threat_intel import check_ip_reputation
 from app.utils.matcher import matches_entry
 from app.utils.scoping import apply_scope
 from app.utils.rule_engine import evaluate_rules
+from app.ml.predictor import predict_threat
+from app.models.ml_config import MLConfig
+from app.utils.scoping import apply_scope as scope_query
 
 router = APIRouter(prefix="/api/logs", tags=["ingestion"])
 
@@ -63,6 +66,14 @@ async def ingest_alerts(
 
     whitelist = await _load_list_entries(db, WhitelistEntry, user)
     blacklist = await _load_list_entries(db, BlacklistEntry, user)
+
+    # --- Load ML config (defaults if none exists) ---
+    ml_q = scope_query(select(MLConfig), MLConfig, user)
+    ml_config = (await db.execute(ml_q)).scalars().first()
+    ml_enabled = ml_config.enabled if ml_config else True
+    ml_sensitivity = ml_config.sensitivity if ml_config else 0.8
+    ml_score_boost = ml_config.score_boost if ml_config else 0.2
+    ml_model_type = ml_config.model_type if ml_config else "random_forest"
 
     rows: list[Alert] = []
     for alert in normalised:
@@ -133,6 +144,39 @@ async def ingest_alerts(
                         q_status = QuarantineStatus.QUARANTINED
                         q_at = datetime.now(timezone.utc)
 
+        # --- ML prediction ---
+        ml_confidence = None
+        if not is_whitelisted and ml_enabled:
+            prediction = predict_threat(
+                severity=alert.severity.value if hasattr(alert.severity, 'value') else alert.severity,
+                category=alert.category.value if hasattr(alert.category, 'value') else alert.category,
+                alert_count_last_hour=1,
+                source_port=alert.source_port or 0,
+                destination_port=alert.destination_port or 0,
+                model_type=ml_model_type,
+            )
+            if prediction:
+                ml_confidence = prediction["confidence"]
+                if prediction["confidence"] > ml_sensitivity and not is_blocked:
+                    score = min(score + ml_score_boost, 1.0)
+                    score = round(score, 3)
+                    if score >= AUTO_BLOCK_THRESHOLD and not is_blocked:
+                        is_blocked = True
+                        if not _check_list(alert.source_ip, blacklist):
+                            new_bl = BlacklistEntry(
+                                entry_type="IP",
+                                value=alert.source_ip,
+                                reason=f"Auto-blocked: ML confidence {ml_confidence} boosted score to {score}",
+                                added_by="auto",
+                                user_id=user.user_id,
+                                team_id=user.team_id,
+                            )
+                            db.add(new_bl)
+                            blacklist.append(new_bl)
+                    elif score >= QUARANTINE_THRESHOLD and q_status == QuarantineStatus.NONE:
+                        q_status = QuarantineStatus.QUARANTINED
+                        q_at = datetime.now(timezone.utc)
+
         row = Alert(
             severity=alert.severity,
             category=alert.category,
@@ -153,6 +197,7 @@ async def ingest_alerts(
             is_blocked=is_blocked,
             quarantine_status=q_status,
             quarantined_at=q_at,
+            ml_confidence=ml_confidence,
         )
         rows.append(row)
 

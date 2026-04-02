@@ -124,6 +124,7 @@ export default function Alerts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedAlert, setSelectedAlert] = useState(null);
+  const [mlFlagged, setMlFlagged] = useState(false);
   const [teamMembers, setTeamMembers] = useState([]);
 
   useEffect(() => {
@@ -138,7 +139,7 @@ export default function Alerts() {
 
   useEffect(() => {
     setPage(1);
-  }, [severityFilter, categoryFilter, assignmentFilter]);
+  }, [severityFilter, categoryFilter, assignmentFilter, mlFlagged]);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,6 +151,7 @@ export default function Alerts() {
           severity: severityFilter,
           category: categoryFilter,
           assignment: assignmentFilter,
+          mlFlagged,
           page,
           pageSize,
         });
@@ -167,7 +169,7 @@ export default function Alerts() {
     }
     fetchAlerts();
     return () => { cancelled = true; };
-  }, [severityFilter, categoryFilter, assignmentFilter, page, pageSize]);
+  }, [severityFilter, categoryFilter, assignmentFilter, mlFlagged, page, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -250,6 +252,16 @@ export default function Alerts() {
           </select>
         )}
 
+        <label className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={mlFlagged}
+            onChange={(e) => setMlFlagged(e.target.checked)}
+            className="accent-purple-500"
+          />
+          <span className="text-sm text-slate-300 whitespace-nowrap">ML-flagged only</span>
+        </label>
+
         <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 flex-1 min-w-[200px] max-w-sm">
           <Search className="w-4 h-4 text-slate-500 shrink-0" />
           <input
@@ -275,7 +287,7 @@ export default function Alerts() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                {[...['Time', 'Severity', 'Category', 'Source IP', 'Destination IP', 'Score', 'Intel'], ...(isExclusive ? ['Assigned'] : []), 'Actions'].map(
+                {[...['Time', 'Severity', 'Category', 'Source IP', 'Destination IP', 'Score', 'ML', 'Intel'], ...(isExclusive ? ['Assigned'] : []), 'Actions'].map(
                   (h) => (
                     <th
                       key={h}
@@ -290,14 +302,14 @@ export default function Alerts() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={isExclusive ? 9 : 8} className="px-5 py-12 text-center">
+                  <td colSpan={isExclusive ? 10 : 9} className="px-5 py-12 text-center">
                     <Loader2 className="w-6 h-6 text-blue-400 animate-spin mx-auto mb-2" />
                     <span className="text-sm text-slate-500">Loading alerts...</span>
                   </td>
                 </tr>
               ) : filteredAlerts.length === 0 ? (
                 <tr>
-                  <td colSpan={isExclusive ? 9 : 8} className="px-5 py-12 text-center text-sm text-slate-500">
+                  <td colSpan={isExclusive ? 10 : 9} className="px-5 py-12 text-center text-sm text-slate-500">
                     No alerts found
                   </td>
                 </tr>
@@ -321,6 +333,23 @@ export default function Alerts() {
                     <td className="px-5 py-3 text-sm text-slate-400 font-mono">{alert.source_ip}</td>
                     <td className="px-5 py-3 text-sm text-slate-400 font-mono">{alert.destination_ip}</td>
                     <td className="px-5 py-3 text-sm text-slate-400 font-mono">{alert.threat_score}</td>
+                    <td className="px-5 py-3">
+                      {alert.ml_confidence != null ? (
+                        <span
+                          className={`inline-block text-xs font-semibold px-2 py-1 rounded border ${
+                            alert.ml_confidence > 0.7
+                              ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                              : alert.ml_confidence >= 0.3
+                              ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'
+                              : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          }`}
+                        >
+                          ML: {Math.round(alert.ml_confidence * 100)}%
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-600">N/A</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3">
                       {alert.is_whitelisted ? (
                         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-emerald-500/15 text-emerald-400 border-emerald-500/30">

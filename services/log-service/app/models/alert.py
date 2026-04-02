@@ -68,4 +68,5 @@ class Alert(Base):
     review_notes = Column(Text, nullable=True)
     assigned_to = Column(BigInteger, nullable=True)
     assigned_name = Column(String(100), nullable=True)
+    ml_confidence = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

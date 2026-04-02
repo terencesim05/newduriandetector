@@ -29,11 +29,13 @@ newduriandetector/
     │   ├── teams/              # Team model, PIN system
     │   └── subscriptions/      # Plans and subscriptions
     └── log-service/            # FastAPI backend (port 8001)
+        ├── models/             # Trained ML model (.pkl) + training data
         └── app/
             ├── models/         # Alert model (SQLAlchemy)
             ├── schemas/        # Pydantic validation schemas
             ├── routes/         # Ingest + query endpoints
             ├── services/       # Normalizer, threat scoring
+            ├── ml/             # ML pipeline (training data gen, model training, predictor)
             └── utils/          # ThreatFox integration
 ```
 
@@ -166,6 +168,46 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 Formula: `score = (0.6 × severity) + (0.4 × category)`
 If ThreatFox flags the source IP, score is boosted to 0.9–1.0 based on confidence level.
 
+### ML Threat Detection
+
+Three ML models predict whether each alert is malicious, adding an ML confidence score alongside the rule-based threat score. Users can switch between models via the ML Config page.
+
+**Available Models:**
+
+| Model | Type | How it works |
+|-------|------|-------------|
+| **Random Forest** | Supervised | Ensemble of 100 decision trees — fast, interpretable, good baseline for structured alert data |
+| **Isolation Forest** | Unsupervised | Trained on benign data only — detects anomalies by measuring how easily a sample is isolated, good for zero-day threats |
+| **Neural Network** | Supervised | Multi-layer perceptron (64→32 neurons) — learns non-linear feature relationships for advanced detection |
+
+**Pipeline:**
+1. **Training data**: 1000 synthetic alerts (500 benign, 500 malicious) with 5 features — severity (encoded 1–4), category (encoded 1–10), alert_count_last_hour, source_port, destination_port
+2. **Training**: supervised models (Random Forest, Neural Network) train on 80/20 split; Isolation Forest trains on benign samples only and learns to flag outliers
+3. **Prediction**: on every ingested alert (unless whitelisted), the selected model returns a confidence score (0.0–1.0) representing the probability it's malicious
+4. **Score enhancement**: if ML confidence exceeds the user's sensitivity threshold (default 0.8), threat_score is boosted (default +0.2) — this can push alerts over the quarantine (0.7) or auto-block (0.9) threshold
+
+| ML Confidence | Badge Color | Meaning |
+|---------------|-------------|---------|
+| < 0.3 | Green | Likely benign |
+| 0.3 – 0.7 | Yellow | Uncertain |
+| > 0.7 | Red | Likely malicious |
+
+**Graceful degradation**: if the selected model's pickle file doesn't exist, the predictor falls back to `threat_model.pkl` (legacy Random Forest). If no model files exist at all, predictions are skipped and `ml_confidence` stays null.
+
+### ML Configuration (Premium/Exclusive Only)
+
+Premium and Exclusive users can tune how the ML model affects threat scoring via the ML Config page:
+
+| Setting | Range | Default | What it does |
+|---------|-------|---------|--------------|
+| **Model Type** | Random Forest / Isolation Forest / Neural Network | Random Forest | Select which ML model to use for predictions |
+| **Enabled** | On / Off | On | Master toggle — disables all ML predictions when off |
+| **Sensitivity** | 0.50 – 0.95 | 0.80 | ML confidence above this value triggers a score boost |
+| **Score Boost** | +0.05 – +0.50 | +0.20 | How much to add to threat_score when ML flags an alert |
+| **Confidence Threshold** | 0.30 – 0.90 | 0.70 | Minimum ML confidence to display "ML-flagged" badge |
+
+Settings are stored per-user (FREE/PREMIUM) or per-team (EXCLUSIVE) and are applied during alert ingestion. Free users see an upgrade prompt instead of the configuration panel.
+
 ### Quarantine System
 
 Alerts are automatically triaged based on threat score:
@@ -277,6 +319,8 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | PATCH | `/api/team/alerts/{id}/assign` | Assign alert to team member |
 | GET | `/api/team/activity` | Team activity feed |
 | GET | `/api/team/stats` | Team alert stats (total, unassigned, per-member) |
+| GET | `/api/ml-config` | Get ML configuration (Premium/Exclusive only) |
+| PUT | `/api/ml-config` | Update ML configuration (Premium/Exclusive only) |
 
 ## Data Models
 
@@ -295,7 +339,7 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 - Fields: `id` (UUID), `user` (FK), `plan` (FK), `status`, `start_date`, `end_date`, `auto_renew`
 
 ### Alert (Log Service)
-- Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status`, `quarantined_at`, `reviewed_by`, `review_notes`, `assigned_to`, `assigned_name`, `detected_at`, `created_at`
+- Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status`, `quarantined_at`, `reviewed_by`, `review_notes`, `assigned_to`, `assigned_name`, `ml_confidence` (Float, nullable), `detected_at`, `created_at`
 
 ### BlacklistEntry / WhitelistEntry (Log Service)
 - Fields: `id` (UUID), `entry_type` (IP/DOMAIN/CIDR), `value`, `reason`, `added_by` (manual/threatfox/bulk_import/rule), `user_id`, `team_id`, `block_count`/`trust_count`, `created_at`
@@ -305,6 +349,9 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 
 ### Rule (Log Service)
 - Fields: `id` (UUID), `name`, `description`, `rule_type` (RATE_LIMIT/CATEGORY_MATCH/FAILED_LOGIN), `conditions` (JSONB), `actions` (JSONB), `priority` (1–10), `enabled`, `trigger_count`, `user_id`, `team_id`, `created_at`
+
+### MLConfig (Log Service)
+- Fields: `id` (UUID), `user_id`, `team_id`, `model_type` (random_forest/isolation_forest/neural_network), `enabled`, `confidence_threshold` (0.0–1.0), `sensitivity` (0.0–1.0), `score_boost` (0.0–0.5), `created_at`, `updated_at`
 
 ## Getting Started
 
@@ -388,6 +435,26 @@ Frontend `frontend/.env`:
 - "My Assignments" widget on Dashboard for EXCLUSIVE users
 - Added `user_name` to JWT for display in activity logs
 - Created test script sending 10 mock alerts across all IDS formats — verified end-to-end ingestion
+
+### April 2 — ML Threat Detection
+- Built machine learning threat detection pipeline with 3 selectable models: Random Forest (supervised), Isolation Forest (unsupervised anomaly detection), Neural Network (MLP)
+- Created synthetic training data generator (`app/ml/generate_training_data.py`) — 1000 samples (500 benign, 500 malicious) with encoded severity, category, alert count, and port features
+- Training script (`app/ml/train_model.py`) — trains all 3 models in one run; supervised models use 80/20 split, Isolation Forest trains on benign data only to learn normal patterns
+- Prediction module (`app/ml/predictor.py`) — loads models by name with caching, handles both `predict_proba` (supervised) and `score_samples` (Isolation Forest) APIs
+- Integrated ML prediction into alert ingestion pipeline — every non-whitelisted alert gets an `ml_confidence` score (0.0–1.0)
+- ML-enhanced scoring: if ML confidence > 0.8, threat_score is boosted by +0.2 (can trigger auto-block or quarantine)
+- Added `ml_confidence` nullable float column to Alert model
+- Added "ML" column to Alerts page — color-coded badge showing ML confidence percentage (green < 30%, yellow 30–70%, red > 70%)
+- Added "ML-flagged only" checkbox filter on Alerts page — server-side filter for alerts with `ml_confidence > 0.7`
+- Added `ml_flagged` query parameter to alerts API endpoint
+- Model gracefully degrades — if `threat_model.pkl` is missing, predictions are skipped and `ml_confidence` stays null
+- Built ML Configuration page (`/ml-config`) — tier-gated to Premium/Exclusive users only
+- ML Config UI: model selection (Random Forest, Isolation Forest, Neural Network), enable/disable toggle, sensitivity slider, score boost slider, confidence threshold slider, reset to default button
+- Backend: `ml_configs` table stores per-user/team ML settings (model_type, enabled, sensitivity, score_boost, confidence_threshold)
+- API: `GET /api/ml-config` and `PUT /api/ml-config` — returns 403 for Free tier users
+- Ingestion pipeline reads user's ML config and applies their sensitivity/boost settings instead of hardcoded defaults
+- Sidebar: "ML Config" link (BrainCircuit icon) visible only to Premium/Exclusive users via `premiumOnly` flag
+- Free users visiting `/ml-config` see an upgrade prompt with link to Settings
 
 ## Design
 

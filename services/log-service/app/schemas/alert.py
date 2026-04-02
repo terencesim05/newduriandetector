@@ -119,6 +119,7 @@ class AlertOut(BaseModel):
     review_notes: str | None
     assigned_to: int | None
     assigned_name: str | None
+    ml_confidence: float | None
     detected_at: datetime
     created_at: datetime
 

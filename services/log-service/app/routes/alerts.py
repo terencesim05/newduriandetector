@@ -19,6 +19,7 @@ async def list_alerts(
     start_date: datetime | None = Query(None),
     end_date: datetime | None = Query(None),
     assignment: str | None = Query(None),  # "mine", "unassigned", or None for all
+    ml_flagged: bool | None = Query(None),  # True = ml_confidence > 0.7
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     user: CurrentUser = Depends(get_current_user),
@@ -38,6 +39,8 @@ async def list_alerts(
         base = base.where(Alert.assigned_to == user.user_id)
     elif assignment == "unassigned":
         base = base.where(Alert.assigned_to.is_(None))
+    if ml_flagged:
+        base = base.where(Alert.ml_confidence > 0.7)
 
     count_q = select(func.count()).select_from(base.subquery())
     total = (await db.execute(count_q)).scalar() or 0

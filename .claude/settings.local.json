@@ -19,7 +19,9 @@
       "Bash(/c/Users/Terence01/AppData/Local/Python/bin/python.exe -c \":*)",
       "Bash(pkill -f \"uvicorn app.main:app\")",
       "Bash(curl -v -X POST https://threatfox-api.abuse.ch/api/v1/ -H \"Content-Type: application/json\" -d \"{\"\"query\"\": \"\"search_ioc\"\", \"\"search_term\"\": \"\"194.26.135.89\"\"}\")",
-      "Bash(curl -s https://threatfox.abuse.ch/api/)"
+      "Bash(curl -s https://threatfox.abuse.ch/api/)",
+      "Bash(mkdir -p \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/app/ml\")",
+      "Bash(mkdir -p \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/models\")"
     ]
   }
 }

@@ -17,6 +17,7 @@ import Blacklist from './pages/Blacklist.jsx'
 import Whitelist from './pages/Whitelist.jsx'
 import Quarantine from './pages/Quarantine.jsx'
 import Rules from './pages/Rules.jsx'
+import MLConfig from './pages/MLConfig.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -34,6 +35,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="/blacklist" element={<DashboardLayout><Blacklist /></DashboardLayout>} />
           <Route path="/whitelist" element={<DashboardLayout><Whitelist /></DashboardLayout>} />
           <Route path="/incidents" element={<DashboardLayout><Incidents /></DashboardLayout>} />
+          <Route path="/ml-config" element={<DashboardLayout><MLConfig /></DashboardLayout>} />
           <Route path="/teams" element={<DashboardLayout><Teams /></DashboardLayout>} />
           <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />
         </Routes>

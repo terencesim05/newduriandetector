@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   ShieldQuestion,
   Workflow,
+  BrainCircuit,
   X,
 } from 'lucide-react';
 
@@ -25,6 +26,7 @@ const baseNavItems = [
   { to: '/blacklist', label: 'Blacklist', icon: ShieldBan },
   { to: '/whitelist', label: 'Whitelist', icon: ShieldCheck },
   { to: '/incidents', label: 'Incidents', icon: AlertTriangle },
+  { to: '/ml-config', label: 'ML Config', icon: BrainCircuit, premiumOnly: true },
   { to: '/teams', label: 'Teams', icon: Users, exclusiveOnly: true },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -75,6 +77,7 @@ export default function Sidebar({ open, onClose }) {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {baseNavItems
+            .filter(({ premiumOnly }) => !premiumOnly || ['PREMIUM', 'EXCLUSIVE'].includes(tier.toUpperCase()))
             .filter(({ exclusiveOnly }) => !exclusiveOnly || tier.toUpperCase() === 'EXCLUSIVE')
             .map(({ to, label, icon: Icon }) => (
             <NavLink

@@ -17,11 +17,12 @@ logApi.interceptors.request.use((config) => {
 });
 
 export const alertService = {
-  async getAlerts({ severity, category, assignment, page = 1, pageSize = 20 } = {}) {
+  async getAlerts({ severity, category, assignment, mlFlagged, page = 1, pageSize = 20 } = {}) {
     const params = { page, page_size: pageSize };
     if (severity && severity !== 'All') params.severity = severity;
     if (category && category !== 'All') params.category = category;
     if (assignment && assignment !== 'All') params.assignment = assignment;
+    if (mlFlagged) params.ml_flagged = true;
     const response = await logApi.get('/api/alerts', { params });
     return response.data;
   },
@@ -119,6 +120,16 @@ export const alertService = {
   },
   async testRule(id) {
     const response = await logApi.post(`/api/rules/${id}/test`);
+    return response.data;
+  },
+
+  // ML Configuration
+  async getMLConfig() {
+    const response = await logApi.get('/api/ml-config');
+    return response.data;
+  },
+  async updateMLConfig(data) {
+    const response = await logApi.put('/api/ml-config', data);
     return response.data;
   },
 
