@@ -123,6 +123,49 @@ export const alertService = {
     return response.data;
   },
 
+  // Analytics
+  async getTimeSeries({ startDate, endDate, severity, category } = {}) {
+    const params = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (severity) params.severity = severity;
+    if (category) params.category = category;
+    const response = await logApi.get('/api/analytics/time-series', { params });
+    return response.data;
+  },
+  async getCategoryDistribution({ startDate, endDate, severity } = {}) {
+    const params = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (severity) params.severity = severity;
+    const response = await logApi.get('/api/analytics/category-distribution', { params });
+    return response.data;
+  },
+  async getTopSources({ limit = 10, startDate, endDate, severity, category } = {}) {
+    const params = { limit };
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (severity) params.severity = severity;
+    if (category) params.category = category;
+    const response = await logApi.get('/api/analytics/top-sources', { params });
+    return response.data;
+  },
+  async getGeoMap({ startDate, endDate, severity, category } = {}) {
+    const params = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (severity) params.severity = severity;
+    if (category) params.category = category;
+    const response = await logApi.get('/api/analytics/geo-map', { params });
+    return response.data;
+  },
+  async getSeverityTrends({ days = 7, category } = {}) {
+    const params = { days };
+    if (category) params.category = category;
+    const response = await logApi.get('/api/analytics/severity-trends', { params });
+    return response.data;
+  },
+
   // ML Configuration
   async getMLConfig() {
     const response = await logApi.get('/api/ml-config');

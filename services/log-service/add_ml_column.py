@@ -1,5 +1,5 @@
 """
-One-time migration: adds ml_confidence column and ml_configs table.
+One-time migration: adds ml_confidence, geo columns, and ml_configs table.
 Run: python add_ml_column.py
 """
 
@@ -26,6 +26,15 @@ async def migrate():
         await conn.execute(text(
             "ALTER TABLE alerts ADD COLUMN IF NOT EXISTS ml_confidence FLOAT"
         ))
+        await conn.execute(text(
+            "ALTER TABLE alerts ADD COLUMN IF NOT EXISTS geo_latitude FLOAT"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE alerts ADD COLUMN IF NOT EXISTS geo_longitude FLOAT"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE alerts ADD COLUMN IF NOT EXISTS geo_country VARCHAR(100)"
+        ))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS ml_configs (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -41,7 +50,7 @@ async def migrate():
             )
         """))
     await engine.dispose()
-    print("Done — ml_confidence column + ml_configs table created.")
+    print("Done — ml_confidence, geo columns + ml_configs table created.")
 
 
 if __name__ == "__main__":

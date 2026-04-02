@@ -20,6 +20,7 @@ from app.utils.matcher import matches_entry
 from app.utils.scoping import apply_scope
 from app.utils.rule_engine import evaluate_rules
 from app.ml.predictor import predict_threat
+from app.utils.geoip import lookup_ip_location
 from app.models.ml_config import MLConfig
 from app.utils.scoping import apply_scope as scope_query
 
@@ -177,6 +178,16 @@ async def ingest_alerts(
                         q_status = QuarantineStatus.QUARANTINED
                         q_at = datetime.now(timezone.utc)
 
+        # --- GeoIP lookup ---
+        geo_lat = None
+        geo_lon = None
+        geo_country = None
+        geo = await lookup_ip_location(alert.source_ip)
+        if geo:
+            geo_lat = geo["latitude"]
+            geo_lon = geo["longitude"]
+            geo_country = geo["country"]
+
         row = Alert(
             severity=alert.severity,
             category=alert.category,
@@ -198,6 +209,9 @@ async def ingest_alerts(
             quarantine_status=q_status,
             quarantined_at=q_at,
             ml_confidence=ml_confidence,
+            geo_latitude=geo_lat,
+            geo_longitude=geo_lon,
+            geo_country=geo_country,
         )
         rows.append(row)
 

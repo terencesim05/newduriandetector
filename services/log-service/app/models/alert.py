@@ -69,4 +69,7 @@ class Alert(Base):
     assigned_to = Column(BigInteger, nullable=True)
     assigned_name = Column(String(100), nullable=True)
     ml_confidence = Column(Float, nullable=True)
+    geo_latitude = Column(Float, nullable=True)
+    geo_longitude = Column(Float, nullable=True)
+    geo_country = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

@@ -12,6 +12,7 @@ from app.routes.quarantine import router as quarantine_router
 from app.routes.rules import router as rules_router
 from app.routes.team import router as team_router
 from app.routes.ml_config import router as ml_config_router
+from app.routes.analytics import router as analytics_router
 
 
 @asynccontextmanager
@@ -43,6 +44,7 @@ app.include_router(quarantine_router)
 app.include_router(rules_router)
 app.include_router(team_router)
 app.include_router(ml_config_router)
+app.include_router(analytics_router)
 
 
 @app.get("/health")

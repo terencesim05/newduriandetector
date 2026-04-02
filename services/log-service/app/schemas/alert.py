@@ -120,6 +120,9 @@ class AlertOut(BaseModel):
     assigned_to: int | None
     assigned_name: str | None
     ml_confidence: float | None
+    geo_latitude: float | None
+    geo_longitude: float | None
+    geo_country: str | None
     detected_at: datetime
     created_at: datetime
 

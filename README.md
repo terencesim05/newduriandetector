@@ -119,6 +119,25 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 - Server-side pagination with working page controls
 - Loading spinner and error handling
 
+### Analytics Page
+
+- **4 charts**: Alerts Over Time (line), Category Distribution (pie), Top Source IPs (bar), Severity Trends (stacked bar)
+- **Chart customization**: each chart has a collapsible "Customize" panel to switch chart type (line/bar/pie), date range (24h/7d/30d/90d), and color scheme (6 palettes)
+- **Global filters**: severity and category dropdowns apply across all charts on Refresh
+- **Export as PNG**: per-chart export button using html2canvas
+- **Export as CSV**: downloads alert time-series data as CSV
+- **Recharts**: all charts built with Recharts, responsive and styled to dark theme
+
+### Attack Map (Exclusive Only)
+
+- **2D interactive world map** built with Leaflet + react-leaflet on CARTO dark basemap tiles
+- **Country borders**: rendered from Natural Earth 50m TopoJSON data (via `world-atlas` + `topojson-client`) with filled landmasses
+- **GeoIP ingestion**: source IP location (lat, lon, country) looked up via ip-api.com on every alert, cached 24h in-memory, private IPs skipped
+- **Attack markers**: circle markers at real-world coordinates — size scaled by alert count, color by avg threat score (blue < 0.4, yellow 0.4–0.7, red > 0.7)
+- **Click popup**: shows country, alert count, avg threat score
+- **Stats bar**: total geolocated alerts, unique countries, high-threat location count
+- **Date range filter**: 24h / 7d / 30d / 90d
+
 ### Incidents Page
 
 - Filter by status (Open, In Progress, Resolved, Closed)
@@ -321,6 +340,11 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | GET | `/api/team/stats` | Team alert stats (total, unassigned, per-member) |
 | GET | `/api/ml-config` | Get ML configuration (Premium/Exclusive only) |
 | PUT | `/api/ml-config` | Update ML configuration (Premium/Exclusive only) |
+| GET | `/api/analytics/time-series` | Alert counts grouped by hour/day |
+| GET | `/api/analytics/category-distribution` | Alert counts per category |
+| GET | `/api/analytics/top-sources` | Top N source IPs by alert count |
+| GET | `/api/analytics/severity-trends` | Severity breakdown over time |
+| GET | `/api/analytics/geo-map` | Alert locations grouped by lat/lon/country |
 
 ## Data Models
 
@@ -339,7 +363,7 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 - Fields: `id` (UUID), `user` (FK), `plan` (FK), `status`, `start_date`, `end_date`, `auto_renew`
 
 ### Alert (Log Service)
-- Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status`, `quarantined_at`, `reviewed_by`, `review_notes`, `assigned_to`, `assigned_name`, `ml_confidence` (Float, nullable), `detected_at`, `created_at`
+- Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status`, `quarantined_at`, `reviewed_by`, `review_notes`, `assigned_to`, `assigned_name`, `ml_confidence` (Float, nullable), `geo_latitude` (Float, nullable), `geo_longitude` (Float, nullable), `geo_country` (String, nullable), `detected_at`, `created_at`
 
 ### BlacklistEntry / WhitelistEntry (Log Service)
 - Fields: `id` (UUID), `entry_type` (IP/DOMAIN/CIDR), `value`, `reason`, `added_by` (manual/threatfox/bulk_import/rule), `user_id`, `team_id`, `block_count`/`trust_count`, `created_at`
@@ -455,6 +479,19 @@ Frontend `frontend/.env`:
 - Ingestion pipeline reads user's ML config and applies their sensitivity/boost settings instead of hardcoded defaults
 - Sidebar: "ML Config" link (BrainCircuit icon) visible only to Premium/Exclusive users via `premiumOnly` flag
 - Free users visiting `/ml-config` see an upgrade prompt with link to Settings
+- Built Analytics dashboard (`/analytics`) with 4 interactive charts (Recharts)
+- Backend: 4 analytics endpoints — time-series, category-distribution, top-sources, severity-trends — all multi-tenant scoped with date/severity/category filters
+- Charts: Alerts Over Time (line), Category Distribution (pie), Top Source IPs (bar), Severity Trends (stacked bar)
+- Per-chart customization: chart type (line/bar/pie), date range (24h/7d/30d/90d), color palette (6 schemes)
+- Global severity + category filters applied on Refresh
+- Export charts as PNG via html2canvas, export data as CSV
+- Sidebar: "Analytics" link with BarChart3 icon visible to all users
+- Built Attack Map page (`/attack-globe`) using Leaflet + react-leaflet with CARTO dark tiles, Exclusive tier only
+- GeoIP lookup utility (`app/utils/geoip.py`) — ip-api.com with 24h in-memory cache, private IP skip
+- Added `geo_latitude`, `geo_longitude`, `geo_country` fields to Alert model — populated during ingestion
+- Map features: country borders from Natural Earth 50m TopoJSON (`world-atlas` + `topojson-client`), filled landmasses, circle markers sized by alert count, color-coded by threat score, click popups, stats bar
+- Backend endpoint `GET /api/analytics/geo-map` — groups alerts by location with count and avg score
+- Sidebar: "Attack Map" link (Globe icon) visible only to Exclusive users
 
 ## Design
 
