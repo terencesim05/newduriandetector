@@ -5,6 +5,7 @@ from rest_framework.response import Response
 
 from .models import Subscription, SubscriptionPlan
 from .serializers import SubscriptionPlanSerializer, SubscriptionSerializer
+from users.team_utils import handle_tier_downgrade_from_exclusive, handle_tier_upgrade_to_exclusive
 
 
 class SubscriptionViewSet(viewsets.GenericViewSet):
@@ -49,10 +50,18 @@ class SubscriptionViewSet(viewsets.GenericViewSet):
 
         # Update user tier based on plan name
         tier_map = {'Free': 'FREE', 'Premium': 'PREMIUM', 'Exclusive': 'EXCLUSIVE'}
+        old_tier = request.user.tier
         new_tier = tier_map.get(plan.name, 'FREE')
         request.user.tier = new_tier
         request.user.subscription_status = 'active'
         request.user.save(update_fields=['tier', 'subscription_status'])
+
+        # If downgraded from EXCLUSIVE, handle team cleanup
+        if old_tier == 'EXCLUSIVE' and new_tier != 'EXCLUSIVE':
+            handle_tier_downgrade_from_exclusive(request.user)
+        # If upgraded to EXCLUSIVE, create team and make leader
+        elif new_tier == 'EXCLUSIVE' and old_tier != 'EXCLUSIVE':
+            handle_tier_upgrade_to_exclusive(request.user)
 
         serializer = SubscriptionSerializer(subscription)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

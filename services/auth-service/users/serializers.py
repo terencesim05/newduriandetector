@@ -6,19 +6,29 @@ from .models import User
 
 
 def _add_custom_claims(refresh, user):
-    """Add tier, team_id, and user_name to both access and refresh tokens."""
+    """Add tier, team_id, user_name, and is_superuser to both access and refresh tokens."""
     refresh["tier"] = user.tier or "FREE"
     refresh["team_id"] = str(user.team_id) if user.team_id else None
     refresh["user_name"] = f"{user.first_name} {user.last_name}".strip() or user.email
     refresh["is_team_leader"] = user.is_team_leader
+    refresh["is_superuser"] = user.is_superuser
     return refresh
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'tier', 'is_team_leader', 'team', 'subscription_status', 'created_at']
+        fields = ['id', 'email', 'first_name', 'last_name', 'tier', 'is_team_leader', 'is_superuser', 'team', 'subscription_status', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    """Serializer for admin views — includes all user fields."""
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'tier', 'is_team_leader',
+                  'is_superuser', 'team', 'subscription_status', 'is_active', 'date_joined', 'created_at']
+        read_only_fields = ['id', 'date_joined', 'created_at']
 
 
 class RegisterSerializer(serializers.ModelSerializer):

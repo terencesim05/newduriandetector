@@ -8,11 +8,11 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, user } = useAuth()
   const navigate = useNavigate()
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={user?.is_superuser ? '/admin/dashboard' : '/dashboard'} replace />
   }
 
   const handleSubmit = async (e) => {
@@ -20,8 +20,8 @@ export default function Login() {
     setError('')
     setSubmitting(true)
     try {
-      await login(email, password)
-      navigate('/dashboard')
+      const data = await login(email, password)
+      navigate(data.user?.is_superuser ? '/admin/dashboard' : '/dashboard')
     } catch (err) {
       const msg = err.response?.data?.detail || err.response?.data?.error || 'Invalid email or password. Please try again.'
       setError(msg)

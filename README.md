@@ -17,15 +17,16 @@ A threat detection aggregation and management platform that consolidates securit
 newduriandetector/
 ├── frontend/                   # React + Vite frontend
 │   └── src/
-│       ├── components/         # Sidebar, Navbar, ProtectedRoute
+│       ├── components/         # Sidebar, Navbar, AdminSidebar, ProtectedRoute
 │       ├── config/             # API configuration
 │       ├── context/            # AuthContext (JWT state management)
-│       ├── layouts/            # DashboardLayout wrapper
+│       ├── layouts/            # DashboardLayout, AdminLayout wrappers
 │       ├── pages/              # All page components
-│       └── services/           # API service layer (authService, alertService)
+│       │   └── admin/          # Admin panel pages
+│       └── services/           # API service layer (authService, adminService)
 └── services/
     ├── auth-service/           # Django backend (port 8000)
-    │   ├── users/              # User model, auth endpoints
+    │   ├── users/              # User model, AuditLog model, auth + admin endpoints
     │   ├── teams/              # Team model, PIN system
     │   └── subscriptions/      # Plans and subscriptions
     └── log-service/            # FastAPI backend (port 8001)
@@ -162,6 +163,30 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 - **Account**: Current tier badge with upgrade buttons
 - **Security**: Change password button, 2FA toggle (placeholder)
 - **Notifications**: Email notifications toggle, alert severity threshold slider
+
+### Admin Panel (Superuser Only)
+
+Separate admin interface for platform management. Admins are identified by Django's built-in `is_superuser` flag. Superusers log in via the same `/login` page and are automatically redirected to the admin dashboard.
+
+- **Admin Dashboard**: stat cards (total users, active subscriptions, monthly revenue, alerts today), user tier breakdown with progress bars, quick action buttons, recent audit log feed
+- **User Management**: searchable, filterable, paginated user table (50/page). Per-user actions: View Details, Suspend/Unsuspend, Change Tier, Reset Password — all behind confirmation modals. Superuser accounts hidden from the list
+- **Team Management**: list all teams with member count, PIN (copy button), creation date. Expandable rows showing members with roles (Leader/Member). Actions: delete team, remove member
+- **Subscription Management**: revenue calculated from user tiers (Premium x $49, Exclusive counted per team x $199). Revenue breakdown cards, ongoing subscriptions table showing type (User/Team), plan, price, status
+- **System Monitoring**: database and FastAPI health checks with status indicators. Alert metrics (total, today, this week, blocked, quarantined). Team activity log table
+- **Audit Logs**: full audit trail with timestamp, action, user, details, IP address. Filterable by action type (login, suspend, tier change, password reset, etc.) and "My Actions Only" toggle
+- **Admin Sidebar**: red-themed navigation separate from user sidebar. Includes "Back to User View" link
+
+**Tier change side effects:**
+- Upgrading to EXCLUSIVE: auto-creates team, user becomes team leader with generated PIN
+- Downgrading leader from EXCLUSIVE: dissolves team, removes all members
+- Downgrading member from EXCLUSIVE: kicked from team
+- These apply to both admin-initiated and self-service tier changes
+
+**Security:**
+- All `/api/admin/*` endpoints require `is_superuser=True` (403 otherwise)
+- Admin layout checks `is_superuser` on every page load — non-admins redirected to `/dashboard`
+- All admin actions logged to `audit_logs` table with IP address
+- Admin cannot suspend other admin accounts
 
 ### Log Ingestion Service
 
@@ -312,6 +337,23 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | GET | `/my-subscription/` | Get user's active subscription |
 | POST | `/upgrade/` | Upgrade subscription plan |
 
+### Admin (`/api/admin/`) — requires `is_superuser=True`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/stats/` | Dashboard stats (users, revenue, subscriptions) |
+| GET | `/users/` | List all users (search, filter, paginate) |
+| GET | `/{id}/user_detail/` | Get detailed user info + subscription |
+| POST | `/{id}/suspend/` | Suspend a user account |
+| POST | `/{id}/unsuspend/` | Unsuspend a user account |
+| POST | `/{id}/change_tier/` | Change user tier (handles team logic) |
+| POST | `/{id}/reset_password/` | Reset user password to temp password |
+| GET | `/subscriptions/` | Subscription stats + ongoing list |
+| GET | `/teams/` | List all teams with members |
+| DELETE | `/{id}/delete_team/` | Delete a team and remove all members |
+| POST | `/{id}/remove_member/` | Remove a member from a team |
+| GET | `/audit_log/` | Audit log entries |
+
 ### Log Service (port 8001)
 
 | Method | Endpoint | Description |
@@ -345,12 +387,19 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | GET | `/api/analytics/top-sources` | Top N source IPs by alert count |
 | GET | `/api/analytics/severity-trends` | Severity breakdown over time |
 | GET | `/api/analytics/geo-map` | Alert locations grouped by lat/lon/country |
+| GET | `/api/admin/system-health` | Database + FastAPI health check (admin only) |
+| GET | `/api/admin/alert-stats` | Global alert stats — total, today, week, blocked, quarantined (admin only) |
+| GET | `/api/admin/activity-log` | Global team activity log (admin only) |
 
 ## Data Models
 
 ### User
 - Extends Django AbstractUser
-- Fields: `tier`, `team` (FK), `is_team_leader`, `subscription_status`, timestamps
+- Fields: `tier`, `team` (FK), `is_team_leader`, `is_superuser` (admin flag), `subscription_status`, timestamps
+
+### AuditLog
+- Fields: `id`, `user_id`, `user_email`, `action`, `details`, `ip_address`, `timestamp`
+- Tracks: logins, registrations, suspensions, tier changes, password resets, team deletions, member removals
 
 ### Team
 - Fields: `id` (UUID), `name`, `pin` (unique, 6 chars), `created_by` (FK to User), `created_at`
@@ -492,6 +541,29 @@ Frontend `frontend/.env`:
 - Map features: country borders from Natural Earth 50m TopoJSON (`world-atlas` + `topojson-client`), filled landmasses, circle markers sized by alert count, color-coded by threat score, click popups, stats bar
 - Backend endpoint `GET /api/analytics/geo-map` — groups alerts by location with count and avg score
 - Sidebar: "Attack Map" link (Globe icon) visible only to Exclusive users
+
+### April 3 — Admin Panel
+- Built full admin dashboard for platform management, separate from user security operations
+- Admin identified by Django's built-in `is_superuser` flag — no extra model field needed
+- Added `is_superuser` to JWT custom claims and UserSerializer so frontend can detect admin users
+- Superusers log in via the same `/login` page — automatically redirected to `/admin/dashboard`
+- Created `AuditLog` model (`audit_logs` table) to track admin and user actions with IP address
+- Wired audit logging into login (admin_login / user_login), registration, suspend, unsuspend, tier change, password reset, team deletion, member removal
+- Built admin API endpoints at `/api/admin/` — all protected by `IsAdminPermission` (requires `is_superuser=True`, returns 403 otherwise)
+- Admin endpoints: stats, user list (search/filter/paginate), user detail, suspend/unsuspend, change tier, reset password, subscription stats, team list, delete team, remove member, audit log
+- Built log-service admin endpoints: system-health (DB + FastAPI check), alert-stats (total/today/week/blocked/quarantined), activity-log (global team activity)
+- Added `is_admin` to log-service `CurrentUser` dataclass with `require_admin` dependency for admin-only routes
+- Built red-themed admin frontend: AdminSidebar, AdminLayout (with `is_superuser` guard), admin navbar with breadcrumbs
+- Admin Dashboard page: 4 stat cards (users, subscriptions, revenue, alerts today), tier breakdown with progress bars, quick action buttons, recent audit feed
+- User Management page: full user table with search by email, filter by tier (Free/Premium/Exclusive) and status (Active/Suspended), 50 users per page with pagination. Actions: View Details modal, Suspend, Unsuspend, Change Tier (modal with dropdown), Reset Password — all destructive actions behind confirmation modals. Superuser accounts excluded from list and stats
+- Team Management page: all teams listed with name, PIN (copy button), member count, creation date. Expandable rows show members with Leader/Member role badges. Actions: delete team (dissolves and removes all members), remove individual member
+- Subscription Management page: revenue calculated from user tiers — Premium users x $49/mo, Exclusive counted per team x $199/mo. Revenue breakdown cards, ongoing subscriptions table with type column (User vs Team with member count)
+- System Monitoring page: database and FastAPI health checks with green/red status indicators, 5 alert metric cards, scrollable team activity log table
+- Audit Logs page: full audit trail table with timestamp, action badge, user email, details, IP address. Filterable by action type dropdown and "My Actions Only" toggle
+- Implemented tier change side effects (shared via `team_utils.py`, used by both admin and self-service):
+  - Upgrade to EXCLUSIVE → auto-create team with generated PIN, user becomes team leader
+  - Downgrade leader from EXCLUSIVE → dissolve team, remove all members, delete team
+  - Downgrade member from EXCLUSIVE → kick from team
 
 ## Design
 

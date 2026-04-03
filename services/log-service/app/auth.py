@@ -16,6 +16,7 @@ class CurrentUser:
     team_id: str | None  # UUID string or None
     user_name: str = ""
     is_team_leader: bool = False
+    is_admin: bool = False
 
 
 def get_current_user(
@@ -33,9 +34,17 @@ def get_current_user(
             team_id=payload.get("team_id"),
             user_name=payload.get("user_name", ""),
             is_team_leader=payload.get("is_team_leader", False),
+            is_admin=payload.get("is_superuser", False),
         )
     except (JWTError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Could not validate credentials: {exc}",
         )
+
+
+def require_admin(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    """Dependency that enforces admin access."""
+    if not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required.")
+    return user
