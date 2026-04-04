@@ -59,4 +59,17 @@ export const authService = {
     const response = await authApi.post(`/api/teams/${teamId}/regenerate_pin/`);
     return response.data;
   },
+
+  async changePassword(currentPassword, newPassword) {
+    const response = await authApi.post('/api/auth/change-password/', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+    return response.data;
+  },
+
+  async changeTier(tier) {
+    const response = await authApi.post('/api/subscriptions/upgrade/', { tier });
+    return response.data;
+  },
 };

@@ -105,6 +105,15 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const refreshUser = async () => {
+    try {
+      const me = await authService.getCurrentUser();
+      setUser(me);
+    } catch {
+      // ignore
+    }
+  };
+
   const logout = async () => {
     try {
       await authService.logout();
@@ -142,7 +151,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, accessToken, refreshToken, isAuthenticated, loading, login, logout, register }}
+      value={{ user, accessToken, refreshToken, isAuthenticated, loading, login, logout, register, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

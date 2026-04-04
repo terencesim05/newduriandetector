@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Shield, CreditCard, Check } from 'lucide-react';
+import { authService } from '../services/authService';
+import { User, Shield, CreditCard, Check, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -14,13 +15,154 @@ const tierStyles = {
   exclusive: { border: '#A855F7', color: '#A855F7', bg: 'rgba(168,85,247,0.1)' },
 };
 
+function SecurityTab({ inputClass }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await authService.changePassword(currentPassword, newPassword);
+      setSuccess('Password changed successfully.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to change password.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5 max-w-lg">
+      <h2 className="text-lg font-semibold text-white">Change Password</h2>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">{error}</div>
+      )}
+      {success && (
+        <div className="bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3 text-sm text-green-400">{success}</div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-slate-300 mb-1.5">Current Password</label>
+        <div className="relative">
+          <input
+            type={showCurrent ? 'text' : 'password'}
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            required
+            className={inputClass}
+          />
+          <button
+            type="button"
+            onClick={() => setShowCurrent(!showCurrent)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-300 mb-1.5">New Password</label>
+        <div className="relative">
+          <input
+            type={showNew ? 'text' : 'password'}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            required
+            minLength={8}
+            className={inputClass}
+          />
+          <button
+            type="button"
+            onClick={() => setShowNew(!showNew)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-300 mb-1.5">Confirm New Password</label>
+        <input
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+          minLength={8}
+          className={inputClass}
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-all shadow-lg shadow-blue-600/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+      >
+        {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+        Change Password
+      </button>
+    </form>
+  );
+}
+
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [email] = useState(user?.email || '');
   const tier = (user?.tier || 'free').toLowerCase();
+  const [changingTier, setChangingTier] = useState(null);
+  const [tierError, setTierError] = useState('');
+  const [tierSuccess, setTierSuccess] = useState('');
+
+  const handleTierChange = async (newTier) => {
+    const action = ['premium', 'exclusive'].indexOf(newTier) > ['premium', 'exclusive'].indexOf(tier) ? 'upgrade' : 'downgrade';
+    const confirmed = window.confirm(
+      `Are you sure you want to ${action} to ${newTier.charAt(0).toUpperCase() + newTier.slice(1)}?${action === 'downgrade' && tier === 'exclusive' ? '\n\nWarning: Downgrading from Exclusive will dissolve your team.' : ''}`
+    );
+    if (!confirmed) return;
+
+    setChangingTier(newTier);
+    setTierError('');
+    setTierSuccess('');
+    try {
+      await authService.changeTier(newTier);
+      await refreshUser();
+      setTierSuccess(`Successfully ${action}d to ${newTier.charAt(0).toUpperCase() + newTier.slice(1)}!`);
+    } catch (err) {
+      console.error('Tier change error:', err.response?.status, err.response?.data, err.message);
+      // Refresh user in case the tier did change despite the error
+      await refreshUser();
+      setTierError(err.response?.data?.detail || `Failed to ${action}. Please try again.`);
+    } finally {
+      setChangingTier(null);
+    }
+  };
 
   const inputClass =
     'w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-600 outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20 transition-all';
@@ -92,6 +234,13 @@ export default function Settings() {
               <p className="text-sm text-slate-400 mt-1">Manage your subscription plan</p>
             </div>
 
+            {tierError && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">{tierError}</div>
+            )}
+            {tierSuccess && (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3 text-sm text-green-400">{tierSuccess}</div>
+            )}
+
             <div className="grid md:grid-cols-3 gap-4">
               {/* Free */}
               <div className={`rounded-xl p-6 border transition-all ${tier === 'free' ? 'bg-gray-500/5 border-gray-400/30 ring-1 ring-gray-400/20' : 'bg-white/[0.03] border-white/[0.06] hover:border-white/[0.1]'}`}>
@@ -110,7 +259,12 @@ export default function Settings() {
                   ))}
                 </ul>
                 {tier !== 'free' ? (
-                  <button className="w-full mt-6 border border-white/[0.08] hover:border-white/[0.15] text-slate-300 hover:text-white font-medium py-2 rounded-lg transition-all hover:bg-white/[0.05] cursor-pointer text-sm">
+                  <button
+                    onClick={() => handleTierChange('free')}
+                    disabled={changingTier === 'free'}
+                    className="w-full mt-6 border border-white/[0.08] hover:border-white/[0.15] text-slate-300 hover:text-white font-medium py-2 rounded-lg transition-all hover:bg-white/[0.05] cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {changingTier === 'free' && <Loader2 className="w-4 h-4 animate-spin" />}
                     Downgrade
                   </button>
                 ) : (
@@ -144,11 +298,21 @@ export default function Settings() {
                     Current Plan
                   </div>
                 ) : tier === 'exclusive' ? (
-                  <button className="w-full mt-6 border border-white/[0.08] hover:border-white/[0.15] text-slate-300 hover:text-white font-medium py-2 rounded-lg transition-all hover:bg-white/[0.05] cursor-pointer text-sm">
+                  <button
+                    onClick={() => handleTierChange('premium')}
+                    disabled={changingTier === 'premium'}
+                    className="w-full mt-6 border border-white/[0.08] hover:border-white/[0.15] text-slate-300 hover:text-white font-medium py-2 rounded-lg transition-all hover:bg-white/[0.05] cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {changingTier === 'premium' && <Loader2 className="w-4 h-4 animate-spin" />}
                     Downgrade
                   </button>
                 ) : (
-                  <button className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded-lg transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 cursor-pointer text-sm">
+                  <button
+                    onClick={() => handleTierChange('premium')}
+                    disabled={changingTier === 'premium'}
+                    className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded-lg transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {changingTier === 'premium' && <Loader2 className="w-4 h-4 animate-spin" />}
                     Upgrade to Premium
                   </button>
                 )}
@@ -175,7 +339,12 @@ export default function Settings() {
                     Current Plan
                   </div>
                 ) : (
-                  <button className="w-full mt-6 bg-purple-600 hover:bg-purple-500 text-white font-medium py-2 rounded-lg transition-all shadow-lg shadow-purple-600/20 hover:shadow-purple-500/30 cursor-pointer text-sm">
+                  <button
+                    onClick={() => handleTierChange('exclusive')}
+                    disabled={changingTier === 'exclusive'}
+                    className="w-full mt-6 bg-purple-600 hover:bg-purple-500 text-white font-medium py-2 rounded-lg transition-all shadow-lg shadow-purple-600/20 hover:shadow-purple-500/30 cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {changingTier === 'exclusive' && <Loader2 className="w-4 h-4 animate-spin" />}
                     Upgrade to Exclusive
                   </button>
                 )}
@@ -185,14 +354,7 @@ export default function Settings() {
         )}
 
         {activeTab === 'security' && (
-          <div className="space-y-5 max-w-lg">
-            <h2 className="text-lg font-semibold text-white">Security</h2>
-            <div>
-              <button className="border border-white/[0.08] hover:border-white/[0.12] text-slate-300 hover:text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-all hover:bg-white/[0.05] cursor-pointer">
-                Change Password
-              </button>
-            </div>
-          </div>
+          <SecurityTab inputClass={inputClass} />
         )}
 
       </div>

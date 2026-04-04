@@ -34,27 +34,43 @@ class SubscriptionViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def upgrade(self, request):
+        tier = request.data.get('tier')
         plan_id = request.data.get('plan_id')
-        if not plan_id:
-            return Response({'detail': 'plan_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            plan = SubscriptionPlan.objects.get(id=plan_id)
-        except SubscriptionPlan.DoesNotExist:
-            return Response({'detail': 'Plan not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Cancel existing active subscriptions
-        Subscription.objects.filter(user=request.user, status='active').update(status='cancelled')
+        valid_tiers = {'free': 'FREE', 'premium': 'PREMIUM', 'exclusive': 'EXCLUSIVE'}
 
-        # Create new subscription
-        subscription = Subscription.objects.create(user=request.user, plan=plan)
+        if tier:
+            new_tier = valid_tiers.get(tier.lower())
+            if not new_tier:
+                return Response({'detail': 'Invalid tier.'}, status=status.HTTP_400_BAD_REQUEST)
+        elif plan_id:
+            try:
+                plan = SubscriptionPlan.objects.get(id=plan_id)
+            except SubscriptionPlan.DoesNotExist:
+                return Response({'detail': 'Plan not found.'}, status=status.HTTP_404_NOT_FOUND)
+            tier_map = {'Free': 'FREE', 'Premium': 'PREMIUM', 'Exclusive': 'EXCLUSIVE'}
+            new_tier = tier_map.get(plan.name, 'FREE')
+        else:
+            return Response({'detail': 'tier or plan_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Update user tier based on plan name
-        tier_map = {'Free': 'FREE', 'Premium': 'PREMIUM', 'Exclusive': 'EXCLUSIVE'}
         old_tier = request.user.tier
-        new_tier = tier_map.get(plan.name, 'FREE')
+        if old_tier == new_tier:
+            return Response({'detail': 'You are already on this plan.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update user tier
         request.user.tier = new_tier
         request.user.subscription_status = 'active'
         request.user.save(update_fields=['tier', 'subscription_status'])
+
+        # Update subscription records if the tables exist
+        try:
+            Subscription.objects.filter(user=request.user, status='active').update(status='cancelled')
+            plan_name_map = {'FREE': 'Free', 'PREMIUM': 'Premium', 'EXCLUSIVE': 'Exclusive'}
+            plan = SubscriptionPlan.objects.filter(name=plan_name_map.get(new_tier)).first()
+            if plan:
+                Subscription.objects.create(user=request.user, plan=plan)
+        except Exception:
+            pass  # subscriptions table may not exist yet
 
         # If downgraded from EXCLUSIVE, handle team cleanup
         if old_tier == 'EXCLUSIVE' and new_tier != 'EXCLUSIVE':
@@ -63,5 +79,4 @@ class SubscriptionViewSet(viewsets.GenericViewSet):
         elif new_tier == 'EXCLUSIVE' and old_tier != 'EXCLUSIVE':
             handle_tier_upgrade_to_exclusive(request.user)
 
-        serializer = SubscriptionSerializer(subscription)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({'detail': 'Tier updated successfully.', 'tier': new_tier}, status=status.HTTP_200_OK)

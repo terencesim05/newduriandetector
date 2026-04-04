@@ -632,6 +632,20 @@ Frontend `frontend/.env`:
 - Removed Notifications and 2FA sections from Settings (not implemented)
 - Added IDS blacklist export (Premium/Exclusive only) — download blacklist formatted for Suricata (.rules), Snort (.txt), or Zeek (.intel)
 
+### April 4 — Landing Page, Self-Service Tier Changes, Change Password
+- Rewrote landing page to showcase the 4 supported IDS sources (Suricata, Zeek, Snort, Kismet) with color-coded cards, format tags, and hover effects
+- Added "4 IDS Sources, One Platform" section between Stats and Features
+- Updated nav with "Integrations" link, fixed stats from "10+" to "4" IDS sources
+- Built self-service tier upgrade/downgrade — users can switch between Free, Premium, and Exclusive directly from Settings Account tab
+- Added `POST /api/subscriptions/upgrade/` support for `tier` parameter (no plan UUID needed)
+- Tier change triggers team side effects (upgrade to Exclusive → auto-create team, downgrade from Exclusive → dissolve team)
+- Confirmation dialog before tier change with warning for Exclusive downgrade
+- Loading spinner, success/error messages on tier change buttons
+- Added `refreshUser()` to AuthContext so UI updates immediately after tier change
+- Built change password feature in Settings Security tab
+- Added `POST /api/auth/change-password/` endpoint with current password verification, 8-char minimum, audit logging
+- Change password form with show/hide toggles, confirm password validation, loading state, success/error feedback
+
 ## Design
 
 - Dark theme (`#0a0e1a` background)

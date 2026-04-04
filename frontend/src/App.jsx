@@ -68,7 +68,7 @@ const features = [
 ]
 
 const stats = [
-  { value: '10+', label: 'IDS Sources Supported' },
+  { value: '4', label: 'IDS Sources Supported' },
   { value: '<50ms', label: 'Alert Latency' },
   { value: '95%', label: 'Noise Reduction' },
   { value: '24/7', label: 'Real-Time Monitoring' },
@@ -90,8 +90,8 @@ function App() {
               <span className="text-lg font-semibold tracking-tight text-white">DurianDetector</span>
             </div>
             <div className="hidden md:flex items-center gap-1">
+              <a href="#ids-sources" className="text-sm text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/5 transition-all">Integrations</a>
               <a href="#features" className="text-sm text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/5 transition-all">Features</a>
-              <a href="#stats" className="text-sm text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/5 transition-all">Performance</a>
               <a href="#pricing" className="text-sm text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/5 transition-all">Pricing</a>
               <div className="w-px h-5 bg-white/10 mx-2" />
               <Link to="/login" className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all ml-1">
@@ -174,8 +174,92 @@ function App() {
         </div>
       </section>
 
+      {/* IDS Sources */}
+      <section id="ids-sources" className="py-28">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <p className="text-sm font-medium tracking-wide uppercase text-blue-400 mb-3">Integrations</p>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">4 IDS Sources, One Platform</h2>
+            <p className="mt-4 text-slate-400 max-w-xl mx-auto">
+              Ingest alerts from every major intrusion detection system — normalized into a unified schema automatically.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Suricata */}
+            <div className="relative bg-white/[0.03] border border-white/[0.06] rounded-xl p-6 hover:border-orange-500/30 hover:bg-white/[0.05] transition-all group text-center">
+              <div className="w-14 h-14 mx-auto bg-orange-500/10 border border-orange-400/15 rounded-2xl flex items-center justify-center text-orange-400 group-hover:bg-orange-500/20 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-7">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.25-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z" />
+                </svg>
+              </div>
+              <h3 className="mt-5 text-lg font-semibold text-white">Suricata</h3>
+              <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+                Full EVE JSON log parsing with signature-based and protocol anomaly detection support.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-300/80 border border-orange-400/10">EVE JSON</span>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-300/80 border border-orange-400/10">Rules Export</span>
+              </div>
+            </div>
+
+            {/* Zeek */}
+            <div className="relative bg-white/[0.03] border border-white/[0.06] rounded-xl p-6 hover:border-cyan-500/30 hover:bg-white/[0.05] transition-all group text-center">
+              <div className="w-14 h-14 mx-auto bg-cyan-500/10 border border-cyan-400/15 rounded-2xl flex items-center justify-center text-cyan-400 group-hover:bg-cyan-500/20 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-7">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
+              </div>
+              <h3 className="mt-5 text-lg font-semibold text-white">Zeek</h3>
+              <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+                Network traffic analysis with notice log ingestion and Intel framework export.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300/80 border border-cyan-400/10">Notice Logs</span>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300/80 border border-cyan-400/10">Intel Export</span>
+              </div>
+            </div>
+
+            {/* Snort */}
+            <div className="relative bg-white/[0.03] border border-white/[0.06] rounded-xl p-6 hover:border-red-500/30 hover:bg-white/[0.05] transition-all group text-center">
+              <div className="w-14 h-14 mx-auto bg-red-500/10 border border-red-400/15 rounded-2xl flex items-center justify-center text-red-400 group-hover:bg-red-500/20 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-7">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                </svg>
+              </div>
+              <h3 className="mt-5 text-lg font-semibold text-white">Snort</h3>
+              <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+                Classic signature-based IDS with alert parsing and reputation list export.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-300/80 border border-red-400/10">Alerts</span>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-300/80 border border-red-400/10">Rep List Export</span>
+              </div>
+            </div>
+
+            {/* Kismet */}
+            <div className="relative bg-white/[0.03] border border-white/[0.06] rounded-xl p-6 hover:border-purple-500/30 hover:bg-white/[0.05] transition-all group text-center">
+              <div className="w-14 h-14 mx-auto bg-purple-500/10 border border-purple-400/15 rounded-2xl flex items-center justify-center text-purple-400 group-hover:bg-purple-500/20 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-7">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z" />
+                </svg>
+              </div>
+              <h3 className="mt-5 text-lg font-semibold text-white">Kismet</h3>
+              <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+                Wireless IDS for detecting rogue access points, deauth attacks, and Wi-Fi threats.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300/80 border border-purple-400/10">Wireless</span>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300/80 border border-purple-400/10">Rogue AP</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
-      <section id="features" className="py-28">
+      <section id="features" className="py-28 border-t border-white/5">
         <div className="max-w-6xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-14">
             <p className="text-sm font-medium tracking-wide uppercase text-blue-400 mb-3">Capabilities</p>
