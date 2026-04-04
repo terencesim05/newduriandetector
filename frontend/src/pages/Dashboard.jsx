@@ -11,9 +11,6 @@ import {
   ShieldAlert,
   Activity,
   ArrowRight,
-  ScanLine,
-  FileText,
-  Plus,
   UserCheck,
 } from 'lucide-react';
 
@@ -91,40 +88,8 @@ export default function Dashboard() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Live Alert Feed */}
-        <div className="xl:col-span-2">
-          <LiveAlertFeed alerts={liveAlerts} connected={connected} onDismiss={dismissAlert} onDismissAll={dismissAllAlerts} />
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
-          <h2 className="text-base font-semibold text-white mb-4">Quick Actions</h2>
-          <div className="space-y-3">
-            <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/15 transition-all cursor-pointer text-sm font-medium">
-              <Plus className="w-4 h-4" />
-              Create Incident
-            </button>
-            <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/15 transition-all cursor-pointer text-sm font-medium">
-              <ScanLine className="w-4 h-4" />
-              Run Scan
-            </button>
-            <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/15 transition-all cursor-pointer text-sm font-medium">
-              <FileText className="w-4 h-4" />
-              View Reports
-            </button>
-          </div>
-
-          {/* Last alert time */}
-          {liveAlerts.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/[0.06]">
-              <p className="text-xs text-slate-500">
-                Last alert: {new Date(liveAlerts[0].created_at).toLocaleTimeString()}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Live Alert Feed */}
+      <LiveAlertFeed alerts={liveAlerts} connected={connected} onDismiss={dismissAlert} onDismissAll={dismissAllAlerts} />
 
       {/* My Assignments — EXCLUSIVE only */}
       {isExclusive && myAlerts.length > 0 && (

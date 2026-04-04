@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard,
@@ -16,30 +17,98 @@ import {
   BrainCircuit,
   BarChart3,
   Globe,
+  FileUp,
+  ChevronDown,
   X,
 } from 'lucide-react';
 
-const baseNavItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/alerts', label: 'Alerts', icon: Bell },
-  { to: '/quarantine', label: 'Quarantine', icon: ShieldQuestion },
-  { to: '/rules', label: 'Rules', icon: Workflow },
-  { to: '/threat-intel', label: 'Threat Intel', icon: ShieldAlert },
-  { to: '/blacklist', label: 'Blacklist', icon: ShieldBan },
-  { to: '/whitelist', label: 'Whitelist', icon: ShieldCheck },
-  { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/attack-globe', label: 'GeoIP Map', icon: Globe },
-  { to: '/incidents', label: 'Incidents', icon: AlertTriangle },
-  { to: '/ml-config', label: 'ML Config', icon: BrainCircuit, premiumOnly: true },
-  { to: '/teams', label: 'Teams', icon: Users, exclusiveOnly: true },
-  { to: '/settings', label: 'Settings', icon: Settings },
+const navSections = [
+  {
+    label: 'Overview',
+    items: [
+      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'Detection',
+    items: [
+      { to: '/alerts', label: 'Alerts', icon: Bell },
+      { to: '/ingestion-logs', label: 'Ingestion Logs', icon: FileUp },
+      { to: '/quarantine', label: 'Quarantine', icon: ShieldQuestion },
+    ],
+  },
+  {
+    label: 'Intelligence',
+    items: [
+      { to: '/threat-intel', label: 'Threat Intel', icon: ShieldAlert },
+      { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+      { to: '/attack-globe', label: 'GeoIP Map', icon: Globe },
+    ],
+  },
+  {
+    label: 'Policies',
+    items: [
+      { to: '/rules', label: 'Rules', icon: Workflow },
+      { to: '/blacklist', label: 'Blacklist', icon: ShieldBan },
+      { to: '/whitelist', label: 'Whitelist', icon: ShieldCheck },
+      { to: '/ml-config', label: 'ML Config', icon: BrainCircuit, premiumOnly: true },
+    ],
+  },
+  {
+    label: 'Workspace',
+    items: [
+      { to: '/incidents', label: 'Incidents', icon: AlertTriangle },
+      { to: '/teams', label: 'Teams', icon: Users, exclusiveOnly: true },
+      { to: '/settings', label: 'Settings', icon: Settings },
+    ],
+  },
 ];
 
-const tierColors = {
-  free: 'border-gray-400 text-gray-400',
-  premium: 'border-blue-500 text-blue-500',
-  exclusive: 'border-purple-500 text-purple-500',
-};
+function SectionGroup({ label, items, tier, onClose }) {
+  const location = useLocation();
+  const hasActiveChild = items.some((item) => location.pathname === item.to);
+  const [open, setOpen] = useState(hasActiveChild);
+
+  // Filter by tier
+  const visibleItems = items
+    .filter(({ premiumOnly }) => !premiumOnly || ['PREMIUM', 'EXCLUSIVE'].includes(tier.toUpperCase()))
+    .filter(({ exclusiveOnly }) => !exclusiveOnly || tier.toUpperCase() === 'EXCLUSIVE');
+
+  if (visibleItems.length === 0) return null;
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+      >
+        {label}
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="space-y-0.5 mt-0.5">
+          {visibleItems.map(({ to, label: itemLabel, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05] border border-transparent'
+                }`
+              }
+            >
+              <Icon className="w-[18px] h-[18px] shrink-0" />
+              {itemLabel}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth();
@@ -79,26 +148,15 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {baseNavItems
-            .filter(({ premiumOnly }) => !premiumOnly || ['PREMIUM', 'EXCLUSIVE'].includes(tier.toUpperCase()))
-            .filter(({ exclusiveOnly }) => !exclusiveOnly || tier.toUpperCase() === 'EXCLUSIVE')
-            .map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05] border border-transparent'
-                }`
-              }
-            >
-              <Icon className="w-[18px] h-[18px] shrink-0" />
-              {label}
-            </NavLink>
+        <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+          {navSections.map((section) => (
+            <SectionGroup
+              key={section.label}
+              label={section.label}
+              items={section.items}
+              tier={tier}
+              onClose={onClose}
+            />
           ))}
         </nav>
 

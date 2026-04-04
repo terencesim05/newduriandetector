@@ -32,15 +32,18 @@ newduriandetector/
     │   ├── users/              # User model, AuditLog model, auth + admin endpoints
     │   ├── teams/              # Team model, PIN system
     │   └── subscriptions/      # Plans and subscriptions
-    └── log-service/            # FastAPI backend (port 8001)
-        ├── models/             # Trained ML model (.pkl) + training data
-        └── app/
-            ├── models/         # Alert model (SQLAlchemy)
-            ├── schemas/        # Pydantic validation schemas
-            ├── routes/         # Ingest + query endpoints
-            ├── services/       # Normalizer, threat scoring
-            ├── ml/             # ML pipeline (training data gen, model training, predictor)
-            └── utils/          # ThreatFox integration
+    ├── log-service/            # FastAPI backend (port 8001)
+    │   ├── models/             # Trained ML model (.pkl) + training data
+    │   └── app/
+    │       ├── models/         # Alert, IngestionLog models (SQLAlchemy)
+    │       ├── schemas/        # Pydantic validation schemas
+    │       ├── routes/         # Ingest, alerts, upload, ingestion-logs, SSE endpoints
+    │       ├── services/       # Normalizer, threat scoring
+    │       ├── ml/             # ML pipeline (training data gen, model training, predictor)
+    │       └── utils/          # ThreatFox integration, GeoIP, scoping, rule engine
+    └── ids-watcher/            # Real-time IDS log watcher (Python async)
+        ├── watcher.py          # Main watcher — tails IDS log files, POSTs to log-service
+        └── config.yaml         # Enable/disable each IDS, set file paths + API token
 ```
 
 ## Features
@@ -220,6 +223,46 @@ Separate admin interface for platform management. Admins are identified by Djang
 - Admin layout checks `is_superuser` on every page load — non-admins redirected to `/dashboard`
 - All admin actions logged to `audit_logs` table with IP address
 - Admin cannot suspend other admin accounts
+
+### Ingestion Logs Page
+
+Completely separate from real-time alerts. Users upload IDS log files for offline analysis — processed results are stored in a dedicated `ingestion_logs` table that never touches the `alerts` table.
+
+- **File upload**: select IDS source (Suricata/Zeek/Snort/Kismet), drop file, click Process
+- **Full pipeline**: every log entry goes through threat scoring, ML detection, ThreatFox lookup, GeoIP, blacklist/whitelist checks, and auto-quarantine
+- **Batch tracking**: each upload gets a `batch_id` — filter by upload batch to see all entries from a specific file
+- **Actions per log**: Block IP (adds to blacklist), Trust IP (adds to whitelist), Release from quarantine
+- **Filters**: severity, category, quarantine status, upload batch, search by IP
+- **Detail modal**: full overview with ML prediction, GeoIP, ThreatFox intel, timeline, raw IDS data
+- **Pagination**: server-side with page controls
+
+### Real-Time IDS Monitoring
+
+The **IDS Watcher** service (`services/ids-watcher/`) tails live IDS log files and pushes new alerts to the log-service ingestion API in real time. This is how DurianDetector gets alerts without manual file uploads.
+
+**Supported engines:**
+
+| IDS | Method | Log Format |
+|-----|--------|------------|
+| **Suricata** | File tail | EVE JSON (`eve.json`) — filters for `event_type: "alert"` |
+| **Zeek** | File tail | Tab-separated `notice.log` with `#fields` header |
+| **Snort** | File tail | JSON alerts (one per line) |
+| **Kismet** | REST API polling | Polls `/alerts/last-time/` endpoint for new wireless alerts |
+
+**How it works:**
+1. Configure `config.yaml` — enable the IDS engines running on your network, set file paths, provide a JWT token
+2. Run `python watcher.py` — starts async file tailers for each enabled IDS
+3. New log lines are parsed, batched (configurable size/interval), and POSTed to `POST /api/logs/ingest`
+4. Alerts appear in the dashboard live feed within seconds via SSE
+
+**Features:**
+- Starts from end of file (only new data, no replay of history)
+- Batched POSTs (default: 50 alerts or 5 seconds, whichever comes first) to reduce API overhead
+- Auto-waits if a log file doesn't exist yet (e.g. IDS hasn't started)
+- Multiple IDS engines can run simultaneously
+- Kismet uses REST API polling since it doesn't write a flat log file
+
+**Requirements:** the IDS engines must be running and actively writing logs. DurianDetector does not perform packet inspection — it is the analysis/dashboard layer that consumes IDS output.
 
 ### Log Ingestion Service
 
@@ -433,6 +476,12 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | GET | `/api/admin/alert-stats` | Global alert stats — total, today, week, blocked, quarantined (admin only) |
 | GET | `/api/admin/activity-log` | Global team activity log (admin only) |
 | GET | `/api/sse/alerts?token=JWT` | SSE stream — pushes new alerts + stats updates (authenticated via query param) |
+| POST | `/api/upload` | Upload IDS log file for processing (stores in ingestion_logs) |
+| GET | `/api/ingestion-logs` | List processed ingestion logs (filterable, paginated) |
+| GET | `/api/ingestion-logs/batches` | List all upload batches for user |
+| POST | `/api/ingestion-logs/{id}/block` | Block IP from ingestion log (adds to blacklist) |
+| POST | `/api/ingestion-logs/{id}/trust` | Trust IP from ingestion log (adds to whitelist) |
+| POST | `/api/ingestion-logs/{id}/release` | Release ingestion log from quarantine |
 
 ## Data Models
 
@@ -456,6 +505,10 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 
 ### Alert (Log Service)
 - Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status`, `quarantined_at`, `reviewed_by`, `review_notes`, `assigned_to`, `assigned_name`, `ml_confidence` (Float, nullable), `geo_latitude` (Float, nullable), `geo_longitude` (Float, nullable), `geo_country` (String, nullable), `detected_at`, `created_at`
+
+### IngestionLog (Log Service)
+- Separate table from alerts — stores processed entries from file uploads only
+- Fields: `id` (UUID), `batch_id` (UUID — groups entries from same upload), `upload_filename`, `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status`, `quarantined_at`, `reviewed_by`, `review_notes`, `ml_confidence` (Float, nullable), `geo_latitude`, `geo_longitude`, `geo_country`, `detected_at`, `created_at`
 
 ### BlacklistEntry / WhitelistEntry (Log Service)
 - Fields: `id` (UUID), `entry_type` (IP/DOMAIN/CIDR), `value`, `reason`, `added_by` (manual/threatfox/bulk_import/rule), `user_id`, `team_id`, `block_count`/`trust_count`, `created_at`
@@ -488,7 +541,16 @@ pip install -r requirements.txt
 py -m uvicorn app.main:app --reload --port 8001
 ```
 
-### 3. Frontend (port 5173)
+### 3. IDS Watcher (optional — for real-time monitoring)
+
+```bash
+cd services/ids-watcher
+pip install -r requirements.txt
+# Edit config.yaml — enable your IDS engines, set file paths, paste JWT token
+python watcher.py
+```
+
+### 4. Frontend (port 5173)
 
 ```bash
 cd frontend
@@ -645,6 +707,24 @@ Frontend `frontend/.env`:
 - Built change password feature in Settings Security tab
 - Added `POST /api/auth/change-password/` endpoint with current password verification, 8-char minimum, audit logging
 - Change password form with show/hide toggles, confirm password validation, loading state, success/error feedback
+
+### April 5 — Ingestion Logs, Real-Time IDS Monitoring
+- Built Ingestion Logs page (`/ingestion-logs`) — completely separate from real-time alerts, uses dedicated `ingestion_logs` table
+- Created `IngestionLog` model with `batch_id` and `upload_filename` to track which upload each entry came from
+- File upload endpoint `POST /api/upload` — parses Suricata/Zeek/Snort/Kismet log files, runs full processing pipeline (scoring, ML, ThreatFox, GeoIP, blacklist/whitelist, auto-quarantine), stores results in `ingestion_logs` only
+- Built `GET /api/ingestion-logs` (filterable, paginated) and `GET /api/ingestion-logs/batches` (upload history grouped by batch)
+- Per-log actions: Block IP (adds to blacklist), Trust IP (adds to whitelist), Release from quarantine
+- Frontend: upload section with IDS source picker, file drop zone, process button; processed logs table with severity/category/status/batch filters, search, pagination, detail modal
+- Added sidebar entry "Ingestion Logs" (FileUp icon) between Whitelist and Analytics
+- Built IDS Watcher service (`services/ids-watcher/`) for real-time monitoring of all 4 IDS engines
+- Suricata watcher: tails `eve.json`, filters for `event_type: "alert"`, batches and POSTs to `/api/logs/ingest`
+- Zeek watcher: tails `notice.log`, parses tab-separated format with `#fields` header
+- Snort watcher: tails JSON alert file, parses one alert per line
+- Kismet watcher: polls Kismet REST API (`/alerts/last-time/`) for new wireless alerts
+- Watcher features: async file tailers (start from EOF), configurable batch size/interval, auto-wait for missing files, multi-IDS concurrent support
+- YAML configuration (`config.yaml`) for API URL, JWT token, per-IDS enable/disable and file paths
+- Created mock Suricata log file (`mock_suricata.json`) with 15 realistic alerts covering SSH brute force, SQL injection, XSS, EternalBlue, Cobalt Strike C2, DGA DNS, Nmap scan, TOR traffic, command injection, and data exfiltration
+- Updated README with Ingestion Logs, Real-Time IDS Monitoring, new API endpoints, IngestionLog data model, and IDS Watcher getting started instructions
 
 ## Design
 

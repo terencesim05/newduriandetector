@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Radio, X, Trash2, ShieldBan, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Radio, X, Trash2, ShieldBan, ShieldCheck, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { alertService } from '../services/alertService';
 
@@ -66,6 +67,13 @@ export default function LiveAlertFeed({ alerts, connected, onDismiss, onDismissA
           )}
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            to="/alerts"
+            className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            View all
+            <ExternalLink className="w-3 h-3" />
+          </Link>
           {alerts.length > 0 && onDismissAll && (
             <button
               onClick={onDismissAll}

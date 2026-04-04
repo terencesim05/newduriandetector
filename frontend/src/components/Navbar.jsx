@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { Menu, Search, Bell } from 'lucide-react';
+import { Menu, Bell } from 'lucide-react';
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -30,18 +30,8 @@ export default function Navbar({ onMenuClick }) {
         </div>
       </div>
 
-      {/* Right: search + notifications */}
+      {/* Right: notifications */}
       <div className="flex items-center gap-3">
-        {/* Search */}
-        <div className="hidden sm:flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 w-56">
-          <Search className="w-4 h-4 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="bg-transparent text-sm text-white placeholder-slate-600 outline-none w-full"
-          />
-        </div>
-
         {/* Notification bell */}
         <button className="relative text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/[0.05] cursor-pointer">
           <Bell className="w-5 h-5" />

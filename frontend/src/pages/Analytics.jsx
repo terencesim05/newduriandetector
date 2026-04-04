@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  BarChart3, Loader2, Download, Image, ChevronDown, ChevronUp, RotateCcw,
+  BarChart3, Loader2, Download, Image, RotateCcw,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -20,15 +20,45 @@ const PALETTES = {
 };
 
 const DATE_RANGES = [
-  { label: 'Last 24h', value: '24h' },
-  { label: 'Last 7 days', value: '7d' },
-  { label: 'Last 30 days', value: '30d' },
-  { label: 'Last 90 days', value: '90d' },
+  { label: 'Past 24 hours', value: '24h' },
+  { label: 'Past 7 days', value: '7d' },
+  { label: 'Past 30 days', value: '30d' },
+  { label: 'Past 90 days', value: '90d' },
 ];
 
-const CHART_TYPES = ['line', 'bar', 'pie'];
-const X_OPTIONS = ['time', 'category', 'severity', 'source_ip'];
-const Y_OPTIONS = ['alert_count', 'threat_score', 'unique_ips'];
+const CHART_TYPES = [
+  { value: 'line', label: 'Line chart' },
+  { value: 'bar', label: 'Bar chart' },
+  { value: 'pie', label: 'Pie chart' },
+];
+
+const PALETTE_LABELS = {
+  default: 'Default',
+  red: 'Red tones',
+  blue: 'Blue tones',
+  purple: 'Purple tones',
+  green: 'Green tones',
+  warm: 'Warm tones',
+};
+
+const CHART_INFO = {
+  time: {
+    title: 'Alerts Over Time',
+    subtitle: 'How many alerts were detected in each time period',
+  },
+  category: {
+    title: 'Category Breakdown',
+    subtitle: 'Which types of threats are most common',
+  },
+  source: {
+    title: 'Top Attacking IPs',
+    subtitle: 'The IP addresses that triggered the most alerts',
+  },
+  severity: {
+    title: 'Severity Trends',
+    subtitle: 'How critical vs low-risk alerts change over time',
+  },
+};
 
 function getDateRange(rangeKey) {
   const now = new Date();
@@ -112,50 +142,39 @@ function SeverityTrendChart({ data, colors }) {
   );
 }
 
-// ── Customization panel for a single chart ──
-function ChartPanel({ config, onChange }) {
-  const [open, setOpen] = useState(false);
-  const selectClass = 'bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-blue-500/40 transition-all cursor-pointer appearance-none w-full';
+// ── Inline chart controls ──
+function ChartControls({ config, onChange }) {
+  const selectClass = 'bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500/40 transition-all cursor-pointer appearance-none';
 
   return (
-    <div className="mt-2">
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
-        {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-        Customize
+    <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-white/[0.06]">
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-slate-500">Show as</span>
+        <select value={config.chartType} onChange={(e) => onChange({ ...config, chartType: e.target.value })} className={selectClass}>
+          {CHART_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </select>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-slate-500">Time period</span>
+        <select value={config.range} onChange={(e) => onChange({ ...config, range: e.target.value })} className={selectClass}>
+          {DATE_RANGES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+        </select>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-slate-500">Colors</span>
+        <select value={config.palette} onChange={(e) => onChange({ ...config, palette: e.target.value })} className={selectClass}>
+          {Object.keys(PALETTES).map(p => <option key={p} value={p}>{PALETTE_LABELS[p] || p}</option>)}
+        </select>
+      </div>
+      <button onClick={() => onChange({ ...config, _refresh: Date.now() })} className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-500 transition-colors cursor-pointer">
+        Update
       </button>
-      {open && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 p-3 bg-white/[0.02] border border-white/[0.06] rounded-lg">
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Chart Type</label>
-            <select value={config.chartType} onChange={(e) => onChange({ ...config, chartType: e.target.value })} className={selectClass}>
-              {CHART_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Date Range</label>
-            <select value={config.range} onChange={(e) => onChange({ ...config, range: e.target.value })} className={selectClass}>
-              {DATE_RANGES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Color Scheme</label>
-            <select value={config.palette} onChange={(e) => onChange({ ...config, palette: e.target.value })} className={selectClass}>
-              {Object.keys(PALETTES).map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
-            </select>
-          </div>
-          <div className="flex items-end">
-            <button onClick={() => onChange({ ...config, _refresh: Date.now() })} className="w-full px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-500 transition-colors cursor-pointer">
-              Apply
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 // ── Chart card wrapper ──
-function ChartCard({ title, chartRef, children }) {
+function ChartCard({ title, subtitle, chartRef, children }) {
   const handleExportPng = async () => {
     if (!chartRef.current) return;
     const canvas = await html2canvas(chartRef.current, { backgroundColor: '#0a0e1a' });
@@ -167,13 +186,14 @@ function ChartCard({ title, chartRef, children }) {
 
   return (
     <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-1">
         <h3 className="text-sm font-medium text-white">{title}</h3>
-        <button onClick={handleExportPng} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer" title="Export as PNG">
+        <button onClick={handleExportPng} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer" title="Save chart as image">
           <Image className="w-3.5 h-3.5" />
-          PNG
+          Save image
         </button>
       </div>
+      {subtitle && <p className="text-xs text-slate-500 mb-3">{subtitle}</p>}
       <div ref={chartRef}>
         {children}
       </div>
@@ -263,11 +283,11 @@ export default function Analytics() {
           <h1 className="text-2xl font-bold text-white">Analytics</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => exportCSV(timeData, 'alerts-time-series.csv')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/[0.08] text-sm text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer">
+          <button onClick={() => exportCSV(timeData, 'alerts-time-series.csv')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/[0.08] text-sm text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer" title="Download alert data as a spreadsheet file">
             <Download className="w-4 h-4" />
-            Export CSV
+            Download data
           </button>
-          <button onClick={handleApplyAll} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-sm text-white font-medium hover:bg-blue-500 transition-colors cursor-pointer">
+          <button onClick={handleApplyAll} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-sm text-white font-medium hover:bg-blue-500 transition-colors cursor-pointer" title="Reload all charts with current filters">
             <RotateCcw className="w-4 h-4" />
             Refresh
           </button>
@@ -275,21 +295,29 @@ export default function Analytics() {
       </div>
 
       {/* Global filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className={selectClass}>
-          <option value="">All Severities</option>
-          <option value="CRITICAL">Critical</option>
-          <option value="HIGH">High</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="LOW">Low</option>
-        </select>
-        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={selectClass}>
-          <option value="">All Categories</option>
-          {['SQL_INJECTION', 'DDOS', 'MALWARE', 'BRUTE_FORCE', 'XSS', 'PORT_SCAN', 'COMMAND_INJECTION', 'PRIVILEGE_ESCALATION', 'DATA_EXFILTRATION', 'ANOMALY'].map(c => (
-            <option key={c} value={c}>{formatCategory(c)}</option>
-          ))}
-        </select>
-        <span className="text-xs text-slate-500">Filters apply on Refresh</span>
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl px-5 py-4">
+        <p className="text-xs text-slate-400 mb-3">Filter all charts — pick a risk level or attack type, then hit Refresh to update.</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-500">Risk level</span>
+            <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className={selectClass}>
+              <option value="">All levels</option>
+              <option value="CRITICAL">Critical — most dangerous</option>
+              <option value="HIGH">High — needs attention</option>
+              <option value="MEDIUM">Medium — moderate risk</option>
+              <option value="LOW">Low — informational</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-500">Attack type</span>
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={selectClass}>
+              <option value="">All types</option>
+              {['SQL_INJECTION', 'DDOS', 'MALWARE', 'BRUTE_FORCE', 'XSS', 'PORT_SCAN', 'COMMAND_INJECTION', 'PRIVILEGE_ESCALATION', 'DATA_EXFILTRATION', 'ANOMALY'].map(c => (
+                <option key={c} value={c}>{formatCategory(c)}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -303,27 +331,27 @@ export default function Analytics() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Alerts over time */}
-          <ChartCard title="Alerts Over Time" chartRef={timeRef}>
+          <ChartCard title={CHART_INFO.time.title} subtitle={CHART_INFO.time.subtitle} chartRef={timeRef}>
             <CustomChart config={timeConfig} data={timeData} colors={PALETTES[timeConfig.palette]} />
-            <ChartPanel config={timeConfig} onChange={setTimeConfig} />
+            <ChartControls config={timeConfig} onChange={setTimeConfig} />
           </ChartCard>
 
           {/* Category distribution */}
-          <ChartCard title="Category Distribution" chartRef={catRef}>
+          <ChartCard title={CHART_INFO.category.title} subtitle={CHART_INFO.category.subtitle} chartRef={catRef}>
             <CustomChart config={catConfig} data={catData} colors={PALETTES[catConfig.palette]} />
-            <ChartPanel config={catConfig} onChange={setCatConfig} />
+            <ChartControls config={catConfig} onChange={setCatConfig} />
           </ChartCard>
 
           {/* Top source IPs */}
-          <ChartCard title="Top Source IPs" chartRef={srcRef}>
+          <ChartCard title={CHART_INFO.source.title} subtitle={CHART_INFO.source.subtitle} chartRef={srcRef}>
             <CustomChart config={srcConfig} data={srcData} colors={PALETTES[srcConfig.palette]} />
-            <ChartPanel config={srcConfig} onChange={setSrcConfig} />
+            <ChartControls config={srcConfig} onChange={setSrcConfig} />
           </ChartCard>
 
           {/* Severity trends */}
-          <ChartCard title="Severity Trends" chartRef={sevRef}>
+          <ChartCard title={CHART_INFO.severity.title} subtitle={CHART_INFO.severity.subtitle} chartRef={sevRef}>
             <SeverityTrendChart data={sevData} />
-            <ChartPanel config={sevConfig} onChange={setSevConfig} />
+            <ChartControls config={sevConfig} onChange={setSevConfig} />
           </ChartCard>
 
         </div>

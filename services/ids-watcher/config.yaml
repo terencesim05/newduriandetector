@@ -1,0 +1,35 @@
+# DurianDetector IDS Watcher configuration
+# Copy this file to config.local.yaml and adjust paths for your environment.
+
+api:
+  url: "http://localhost:8001"
+  # JWT access token for the user account that should own the ingested alerts.
+  # Generate one via POST /api/auth/login/ and paste the accessToken here.
+  token: "YOUR_JWT_ACCESS_TOKEN"
+
+# Batch settings — the watcher groups new lines and POSTs them in batches.
+batch:
+  size: 50          # Max alerts per POST request
+  interval: 5       # Seconds to wait before flushing a partial batch
+
+# Enable / disable each IDS watcher independently.
+# Set `enabled: true` and point `path` to the log file the IDS writes to.
+
+suricata:
+  enabled: false
+  path: "/var/log/suricata/eve.json"
+
+zeek:
+  enabled: false
+  path: "/opt/zeek/logs/current/notice.log"
+
+snort:
+  enabled: false
+  path: "/var/log/snort/alert_json.txt"
+
+kismet:
+  enabled: false
+  # Kismet exposes a REST API — the watcher polls it instead of tailing a file.
+  url: "http://localhost:2501"
+  api_key: ""
+  poll_interval: 5   # Seconds between polls
