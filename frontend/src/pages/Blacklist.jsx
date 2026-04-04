@@ -1,8 +1,42 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShieldBan, Plus, Trash2, Upload, Loader2 } from 'lucide-react';
+import { ShieldBan, Plus, Trash2, Upload, Loader2, Download } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { alertService } from '../services/alertService';
 
+function exportFile(content, filename) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function toSuricataRules(entries) {
+  return entries
+    .filter((e) => e.entry_type === 'IP')
+    .map((e) => `drop ip ${e.value} any -> any any (msg:"Blocked by DurianDetector — ${(e.reason || '').replace(/"/g, '\\"')}"; sid:${Math.floor(Math.random() * 900000) + 100000}; rev:1;)`)
+    .join('\n');
+}
+
+function toSnortReputation(entries) {
+  return entries
+    .filter((e) => e.entry_type === 'IP')
+    .map((e) => e.value)
+    .join('\n');
+}
+
+function toZeekIntel(entries) {
+  const header = '#fields\tindicator\tindicator_type\tmeta.source\tmeta.desc';
+  const rows = entries
+    .filter((e) => e.entry_type === 'IP')
+    .map((e) => `${e.value}\tIntel::ADDR\tDurianDetector\t${e.reason || 'Blacklisted'}`);
+  return [header, ...rows].join('\n');
+}
+
 export default function Blacklist() {
+  const { user } = useAuth();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -82,7 +116,32 @@ export default function Blacklist() {
           <h1 className="text-2xl font-bold text-white">Blacklist</h1>
           <span className="text-sm text-slate-500">({entries.length} entries)</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {['PREMIUM', 'EXCLUSIVE'].includes(user?.tier?.toUpperCase()) && entries.length > 0 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => exportFile(toSuricataRules(entries), 'blacklist-suricata.rules')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-slate-400 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Suricata
+              </button>
+              <button
+                onClick={() => exportFile(toSnortReputation(entries), 'blacklist-snort.txt')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-slate-400 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Snort
+              </button>
+              <button
+                onClick={() => exportFile(toZeekIntel(entries), 'blacklist-zeek.intel')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-slate-400 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Zeek
+              </button>
+            </div>
+          )}
           <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-slate-400 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer">
             <Upload className="w-4 h-4" />
             Import CSV

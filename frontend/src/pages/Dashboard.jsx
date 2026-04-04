@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { alertService } from '../services/alertService';
+import { useSSE } from '../context/SSEContext';
+import { useAlertNotifications } from '../hooks/useAlertNotifications.jsx';
+import LiveAlertFeed from '../components/LiveAlertFeed';
+import ConnectionStatus from '../components/ConnectionStatus';
 import {
   Bell,
   AlertTriangle,
@@ -13,27 +17,12 @@ import {
   UserCheck,
 } from 'lucide-react';
 
-const mockAlerts = [
-  { time: '2 min ago', severity: 'CRITICAL', category: 'SQL_INJECTION', sourceIp: '192.168.1.105' },
-  { time: '8 min ago', severity: 'HIGH', category: 'BRUTE_FORCE', sourceIp: '10.0.2.34' },
-  { time: '15 min ago', severity: 'MEDIUM', category: 'XSS', sourceIp: '192.168.3.88' },
-  { time: '32 min ago', severity: 'HIGH', category: 'MALWARE', sourceIp: '10.0.1.12' },
-  { time: '1 hr ago', severity: 'LOW', category: 'DDOS', sourceIp: '192.168.2.200' },
-];
-
 const severityColors = {
   CRITICAL: 'bg-red-500/15 text-red-400 border-red-500/30',
   HIGH: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
   MEDIUM: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
   LOW: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
 };
-
-const stats = [
-  { label: 'Total Alerts', value: '127', icon: Bell, color: 'blue' },
-  { label: 'Critical Alerts', value: '8', icon: ShieldAlert, color: 'red' },
-  { label: 'Open Incidents', value: '3', icon: AlertTriangle, color: 'orange' },
-  { label: 'Threat Score', value: '72', icon: Activity, color: 'emerald', isProgress: true },
-];
 
 const colorMap = {
   blue: { bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-400', bar: 'bg-blue-500' },
@@ -46,6 +35,10 @@ export default function Dashboard() {
   const { user } = useAuth();
   const isExclusive = user?.tier?.toUpperCase() === 'EXCLUSIVE';
   const [myAlerts, setMyAlerts] = useState([]);
+  const { alerts: liveAlerts, stats: liveStats, connected, error, reconnect, dismissAlert, dismissAllAlerts } = useSSE();
+
+  // Notifications for new alerts
+  useAlertNotifications(liveAlerts);
 
   useEffect(() => {
     if (isExclusive) {
@@ -55,21 +48,31 @@ export default function Dashboard() {
     }
   }, [isExclusive]);
 
+  const statCards = [
+    { label: 'Total Alerts', value: liveStats?.total ?? '—', icon: Bell, color: 'blue' },
+    { label: 'Critical Alerts', value: liveStats?.critical ?? '—', icon: ShieldAlert, color: 'red' },
+    { label: 'Alerts Today', value: liveStats?.today ?? '—', icon: AlertTriangle, color: 'orange' },
+    { label: 'Blocked', value: liveStats?.blocked ?? '—', icon: Activity, color: 'emerald' },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Welcome */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">
-          Welcome back, {user?.first_name || 'User'}!
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Here's what's happening with your network security today.
-        </p>
+      {/* Welcome + Connection Status */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">
+            Welcome back, {user?.first_name || 'User'}!
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Here's what's happening with your network security today.
+          </p>
+        </div>
+        <ConnectionStatus connected={connected} error={error} onReconnect={reconnect} />
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {stats.map(({ label, value, icon: Icon, color, isProgress }) => {
+        {statCards.map(({ label, value, icon: Icon, color }) => {
           const c = colorMap[color];
           return (
             <div
@@ -82,68 +85,16 @@ export default function Dashboard() {
                   <Icon className={`w-[18px] h-[18px] ${c.text}`} />
                 </div>
               </div>
-              {isProgress ? (
-                <>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold text-white">{value}</span>
-                    <span className="text-sm text-slate-500">/100</span>
-                  </div>
-                  <div className="mt-3 w-full h-2 bg-white/[0.06] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${c.bar} rounded-full transition-all`}
-                      style={{ width: `${value}%` }}
-                    />
-                  </div>
-                </>
-              ) : (
-                <span className="text-2xl font-bold text-white">{value}</span>
-              )}
+              <span className={`text-2xl font-bold text-white transition-all`}>{value}</span>
             </div>
           );
         })}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Recent Alerts */}
-        <div className="xl:col-span-2 bg-white/[0.03] border border-white/[0.06] rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-            <h2 className="text-base font-semibold text-white">Recent Alerts</h2>
-            <a
-              href="/alerts"
-              className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-            >
-              View All <ArrowRight className="w-3.5 h-3.5" />
-            </a>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Time</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Severity</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Category</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Source IP</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockAlerts.map((alert, i) => (
-                  <tr
-                    key={i}
-                    className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors"
-                  >
-                    <td className="px-5 py-3 text-sm text-slate-400">{alert.time}</td>
-                    <td className="px-5 py-3">
-                      <span className={`inline-block text-xs font-semibold px-2 py-1 rounded border ${severityColors[alert.severity]}`}>
-                        {alert.severity}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-sm text-slate-300 font-mono">{alert.category}</td>
-                    <td className="px-5 py-3 text-sm text-slate-400 font-mono">{alert.sourceIp}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {/* Live Alert Feed */}
+        <div className="xl:col-span-2">
+          <LiveAlertFeed alerts={liveAlerts} connected={connected} onDismiss={dismissAlert} onDismissAll={dismissAllAlerts} />
         </div>
 
         {/* Quick Actions */}
@@ -163,6 +114,15 @@ export default function Dashboard() {
               View Reports
             </button>
           </div>
+
+          {/* Last alert time */}
+          {liveAlerts.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-white/[0.06]">
+              <p className="text-xs text-slate-500">
+                Last alert: {new Date(liveAlerts[0].created_at).toLocaleTimeString()}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

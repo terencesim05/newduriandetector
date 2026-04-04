@@ -10,6 +10,8 @@ A threat detection aggregation and management platform that consolidates securit
 - **Database**: PostgreSQL (Supabase)
 - **Threat Intelligence**: ThreatFox API (abuse.ch)
 - **3D Visualization**: Three.js / React Three Fiber (landing page globe)
+- **Real-Time**: Server-Sent Events (SSE) for live alert streaming
+- **Notifications**: react-hot-toast, Browser Notification API
 
 ## Project Structure
 
@@ -23,6 +25,7 @@ newduriandetector/
 │       ├── layouts/            # DashboardLayout, AdminLayout wrappers
 │       ├── pages/              # All page components
 │       │   └── admin/          # Admin panel pages
+│       ├── hooks/              # useSSE, useAlertNotifications
 │       └── services/           # API service layer (authService, adminService)
 └── services/
     ├── auth-service/           # Django backend (port 8000)
@@ -59,11 +62,10 @@ newduriandetector/
 | Alerts/Incidents | Yes | Yes | Yes |
 | ML configurations | - | Yes | Yes |
 | Incident management | - | Yes | Yes |
-| PDF reports | - | Yes | Yes |
+| IDS blacklist export | - | Yes | Yes |
 | Unlimited alerts | - | Yes | Yes |
-| Email notifications | - | Yes | Yes |
+| GeoIP attack map | Yes | Yes | Yes |
 | Team workspace | - | - | Yes (1 leader + 4 members) |
-| 3D attack globe | - | - | Yes |
 | AI-driven analysis | - | - | Yes |
 | Custom alert rules | - | - | Yes |
 | Dedicated support | - | - | Yes |
@@ -101,22 +103,54 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 ### Dashboard
 
 - Welcome greeting with user's first name
-- 4 stat cards: Total Alerts, Critical Alerts, Open Incidents, Threat Score (with progress bar)
-- Recent Alerts table (Time, Severity, Category, Source IP)
+- **Live stats** via SSE: Total Alerts, Critical Alerts, Alerts Today, Blocked — updated every 10 seconds
+- **Live Alert Feed**: last 10 alerts streamed in real-time via SSE, fade-in animation, severity color-coded, time-ago display
+- **Connection status indicator**: green pulsing "Live" badge when connected, red "Disconnected" with reconnect button
 - Quick Actions: Create Incident, Run Scan, View Reports
 - **My Assignments** widget (EXCLUSIVE only) — shows alerts assigned to the current user
 
+### Real-Time Alerts (SSE)
+
+- **Server-Sent Events** streaming from `GET /api/sse/alerts`
+- **Global SSE context**: connection persists across all pages, not just the dashboard
+- **Initial load**: fetches last 10 alerts from the API on login, then SSE appends new ones — alerts survive page refresh
+- **User-scoped**: SSE context resets on logout/login — switching accounts clears old data and loads the new user's alerts
+- New alerts pushed to browser within 2 seconds of ingestion
+- Stats (total, today, critical, blocked) updated every 10 seconds
+- Heartbeat every 30 seconds to keep connection alive
+- Multi-tenant scoped (users see only their alerts, teams share)
+- **Auto-reconnect** with exponential backoff (1s → 2s → 4s → 8s → 16s max)
+- JWT passed via query param (EventSource API cannot send headers)
+- **Live feed actions**: Block IP / Trust IP buttons on each alert, dismiss individual or clear all
+
+### Notifications
+
+- **Toast notifications** (react-hot-toast): in-app toast in bottom-right for HIGH and CRITICAL alerts, auto-dismiss after 5 seconds
+- **Browser desktop notifications**: for CRITICAL alerts only, shows category and source IP, click to focus window
+- Permission requested on dashboard mount
+- Notifications only fire for alerts arriving after connection (not historical)
+
 ### Alerts Page
 
-- **Live data** from the FastAPI log service (no more mock data)
+- **Live data** from the FastAPI log service
 - Filter by severity (Critical/High/Medium/Low) and category (11 categories)
+- **Date range filter**: From/To datetime pickers with clear button
 - **Assignment filter** (EXCLUSIVE only): All / Assigned to Me / Unassigned
 - **Assign to** dropdown per alert row (EXCLUSIVE only) — select a team member to assign
 - Assigned member badge shown on each alert
 - Search by IP address or category
 - Alert table with severity badges, threat score, and ThreatFox intel column
-- **ThreatFox badge**: red "FLAGGED" badge on alerts where the source IP is a known threat
-- **Threat detail modal**: click any flagged alert to see malware family, threat type, confidence level, tags, first/last seen dates, and reference URL
+- **Quick actions**: Block IP / Trust IP buttons per alert — updates alert status in database, shows toast confirmation
+- **Block All Critical**: one-click mass block of all critical severity IPs on the current page
+- **Alert detail modal**: click "Details" on any alert to see full info:
+  - Overview: source/dest IP, ports, protocol, IDS source, threat score, quarantine status
+  - Status badges: trusted, blocked, quarantined, ThreatFox flagged, assigned to
+  - ML prediction: confidence bar with interpretation (benign/uncertain/malicious)
+  - GeoIP location: country, latitude, longitude
+  - ThreatFox intelligence: malware family, threat type, confidence, tags, reference URL
+  - Quarantine review notes
+  - Timeline: detected, ingested, quarantined timestamps
+  - Raw IDS data: collapsible formatted JSON
 - Server-side pagination with working page controls
 - Loading spinner and error handling
 
@@ -129,7 +163,7 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 - **Export as CSV**: downloads alert time-series data as CSV
 - **Recharts**: all charts built with Recharts, responsive and styled to dark theme
 
-### Attack Map (Exclusive Only)
+### Attack Map (All Tiers)
 
 - **2D interactive world map** built with Leaflet + react-leaflet on CARTO dark basemap tiles
 - **Country borders**: rendered from Natural Earth 50m TopoJSON data (via `world-atlas` + `topojson-client`) with filled landmasses
@@ -160,9 +194,8 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 ### Settings Page
 
 - **Profile**: Edit first name, last name (email read-only)
-- **Account**: Current tier badge with upgrade buttons
-- **Security**: Change password button, 2FA toggle (placeholder)
-- **Notifications**: Email notifications toggle, alert severity threshold slider
+- **Account**: Side-by-side plan comparison (Free/Premium/Exclusive) with feature lists, pricing, and upgrade/downgrade buttons — current plan highlighted
+- **Security**: Change password button
 
 ### Admin Panel (Superuser Only)
 
@@ -174,7 +207,7 @@ Separate admin interface for platform management. Admins are identified by Djang
 - **Subscription Management**: revenue calculated from user tiers (Premium x $49, Exclusive counted per team x $199). Revenue breakdown cards, ongoing subscriptions table showing type (User/Team), plan, price, status
 - **System Monitoring**: database and FastAPI health checks with status indicators. Alert metrics (total, today, this week, blocked, quarantined). Team activity log table
 - **Audit Logs**: full audit trail with timestamp, action, user, details, IP address. Filterable by action type (login, suspend, tier change, password reset, etc.) and "My Actions Only" toggle
-- **Admin Sidebar**: red-themed navigation separate from user sidebar. Includes "Back to User View" link
+- **Admin Sidebar**: red-themed navigation separate from user sidebar
 
 **Tier change side effects:**
 - Upgrading to EXCLUSIVE: auto-creates team, user becomes team leader with generated PIN
@@ -302,6 +335,15 @@ Each list supports three entry types:
 
 Entries track how many times they've been matched (`block_count` / `trust_count`). Lists are multi-tenant — each user manages their own.
 
+**Mutual exclusion**: adding an IP to the blacklist automatically removes it from the whitelist (and vice versa). An IP cannot be on both lists simultaneously.
+
+**Retroactive updates**: blocking or trusting an IP updates all existing alerts from that IP in the database — `is_blocked`/`is_whitelisted` and `threat_score` are set immediately, persisting across page refreshes.
+
+**IDS Blacklist Export** (Premium/Exclusive only):
+- **Suricata**: `.rules` file with `drop ip` rules, auto-generated SIDs
+- **Snort**: `.txt` reputation list, one IP per line
+- **Zeek**: `.intel` file in Intel framework format (`Intel::ADDR` indicators)
+
 ### Threat Intelligence Feed
 
 The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compromise) published on ThreatFox. Users can:
@@ -390,6 +432,7 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | GET | `/api/admin/system-health` | Database + FastAPI health check (admin only) |
 | GET | `/api/admin/alert-stats` | Global alert stats — total, today, week, blocked, quarantined (admin only) |
 | GET | `/api/admin/activity-log` | Global team activity log (admin only) |
+| GET | `/api/sse/alerts?token=JWT` | SSE stream — pushes new alerts + stats updates (authenticated via query param) |
 
 ## Data Models
 
@@ -564,6 +607,30 @@ Frontend `frontend/.env`:
   - Upgrade to EXCLUSIVE → auto-create team with generated PIN, user becomes team leader
   - Downgrade leader from EXCLUSIVE → dissolve team, remove all members, delete team
   - Downgrade member from EXCLUSIVE → kick from team
+- Built Server-Sent Events (SSE) real-time alert streaming
+- Created SSE endpoint `GET /api/sse/alerts` — polls for new alerts every 2 seconds, sends stats every 10 seconds, heartbeat every 30 seconds
+- JWT auth via query param (EventSource API cannot send Authorization headers)
+- Multi-tenant scoped — users see only their alerts, EXCLUSIVE teams share
+- Created `useSSE` React hook — manages EventSource connection, auto-reconnect with exponential backoff (1s→16s max), returns live alerts/stats/connection state
+- Created `LiveAlertFeed` component — last 10 alerts with fade-in animation, severity badges, time-ago display, "Live" pulsing badge
+- Created `ConnectionStatus` component — green "Live" with pulse animation, red "Disconnected" with retry button
+- Created `useAlertNotifications` hook — toast notifications (react-hot-toast) for HIGH/CRITICAL alerts, browser desktop notifications for CRITICAL alerts
+- Rewrote Dashboard to use live SSE data — replaced all mock data with real-time stats and alerts
+- Installed react-hot-toast, added `<Toaster />` to app root
+- Added fadeIn CSS keyframe animation for live alert entries
+- Moved SSE to global `SSEContext` provider — connection persists across all pages, resets on user change
+- SSE context loads last 10 alerts from API on login, deduplicates with SSE stream
+- Added Block IP / Trust IP action buttons to live alert feed with toast feedback — auto-dismisses alert on action
+- Added alert detail modal to Alerts page — full overview, ML prediction, GeoIP, ThreatFox intel, timeline, raw data
+- Added toast feedback to Block IP / Trust IP on Alerts page
+- Added "Block All Critical" mass action button on Alerts page
+- Added date range filter (From/To datetime pickers) on Alerts page
+- Fixed blacklist/whitelist mutual exclusion — adding to one list removes from the other
+- Fixed retroactive alert updates — blocking/trusting an IP now updates all existing alerts from that IP in the database
+- Made GeoIP Map accessible to all tiers (was Exclusive only)
+- Rewrote Settings Account tab — side-by-side plan comparison cards with feature lists, pricing, upgrade/downgrade buttons
+- Removed Notifications and 2FA sections from Settings (not implemented)
+- Added IDS blacklist export (Premium/Exclusive only) — download blacklist formatted for Suricata (.rules), Snort (.txt), or Zeek (.intel)
 
 ## Design
 
@@ -571,5 +638,7 @@ Frontend `frontend/.env`:
 - Blue primary (`#3B82F6`), green success, yellow warning, red danger
 - Severity colors: Critical (red), High (orange), Medium (yellow), Low (gray)
 - Tier badge colors: Free (gray), Premium (blue), Exclusive (purple)
+- Admin theme: red accent (`#EF4444`), darker background (`#0d1117`), red-tinted borders
 - Responsive: mobile sidebar collapse, adaptive grid layouts
 - Glass-morphism cards with subtle borders and hover effects
+- Live alert feed with fade-in animations and pulsing connection indicator

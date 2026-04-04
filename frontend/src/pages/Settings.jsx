@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Shield, Bell, CreditCard } from 'lucide-react';
+import { User, Shield, CreditCard, Check } from 'lucide-react';
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'account', label: 'Account', icon: CreditCard },
   { id: 'security', label: 'Security', icon: Shield },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
 ];
 
 const tierStyles = {
@@ -21,10 +20,6 @@ export default function Settings() {
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [email] = useState(user?.email || '');
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [severityThreshold, setSeverityThreshold] = useState(50);
-  const [twoFA, setTwoFA] = useState(false);
-
   const tier = (user?.tier || 'free').toLowerCase();
 
   const inputClass =
@@ -91,36 +86,101 @@ export default function Settings() {
         )}
 
         {activeTab === 'account' && (
-          <div className="space-y-5 max-w-lg">
-            <h2 className="text-lg font-semibold text-white">Account</h2>
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Current Tier</label>
-              <span
-                className="inline-block text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border-2"
-                style={{
-                  borderColor: tierStyles[tier]?.border,
-                  color: tierStyles[tier]?.color,
-                  backgroundColor: tierStyles[tier]?.bg,
-                }}
-              >
-                {tier}
-              </span>
+              <h2 className="text-lg font-semibold text-white">Account</h2>
+              <p className="text-sm text-slate-400 mt-1">Manage your subscription plan</p>
             </div>
-            {tier === 'free' && (
-              <button className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-all shadow-lg shadow-blue-600/20 cursor-pointer">
-                Upgrade to Premium
-              </button>
-            )}
-            {tier === 'premium' && (
-              <button className="bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-all shadow-lg shadow-amber-600/20 cursor-pointer">
-                Upgrade to Exclusive
-              </button>
-            )}
-            {tier === 'exclusive' && (
-              <p className="text-sm text-emerald-400">
-                You have full platform access with your Exclusive plan.
-              </p>
-            )}
+
+            <div className="grid md:grid-cols-3 gap-4">
+              {/* Free */}
+              <div className={`rounded-xl p-6 border transition-all ${tier === 'free' ? 'bg-gray-500/5 border-gray-400/30 ring-1 ring-gray-400/20' : 'bg-white/[0.03] border-white/[0.06] hover:border-white/[0.1]'}`}>
+                {tier === 'free' && <span className="inline-block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Current Plan</span>}
+                <p className="text-sm font-medium text-slate-400 uppercase tracking-wide">Free</p>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-white">$0</span>
+                  <span className="text-slate-500 text-sm">/month</span>
+                </div>
+                <ul className="mt-5 space-y-2.5">
+                  {['Real-time alert monitoring', 'Basic SOC dashboard', 'Up to 100 alerts/day', 'Community support'].map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-slate-300">
+                      <Check className="w-4 h-4 mt-0.5 text-slate-500 shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                {tier !== 'free' ? (
+                  <button className="w-full mt-6 border border-white/[0.08] hover:border-white/[0.15] text-slate-300 hover:text-white font-medium py-2 rounded-lg transition-all hover:bg-white/[0.05] cursor-pointer text-sm">
+                    Downgrade
+                  </button>
+                ) : (
+                  <div className="w-full mt-6 border border-gray-400/20 text-gray-400 font-medium py-2 rounded-lg text-sm text-center">
+                    Current Plan
+                  </div>
+                )}
+              </div>
+
+              {/* Premium */}
+              <div className={`relative rounded-xl p-6 border transition-all ${tier === 'premium' ? 'bg-blue-500/5 border-blue-500/30 ring-1 ring-blue-500/20' : 'bg-white/[0.03] border-white/[0.06] hover:border-blue-500/20'}`}>
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                  <span className="bg-blue-600 text-white text-xs font-semibold px-3 py-0.5 rounded-full">Most Popular</span>
+                </div>
+                {tier === 'premium' && <span className="inline-block text-xs font-semibold text-blue-400 uppercase tracking-wider mb-3">Current Plan</span>}
+                <p className="text-sm font-medium text-blue-400 uppercase tracking-wide">Premium</p>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-white">$49</span>
+                  <span className="text-slate-500 text-sm">/month</span>
+                </div>
+                <ul className="mt-5 space-y-2.5">
+                  {['Everything in Free, plus:', 'ML model configurations', 'Incident management', 'PDF report generation', 'Unlimited alerts'].map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-slate-300">
+                      <Check className="w-4 h-4 mt-0.5 text-blue-400 shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                {tier === 'premium' ? (
+                  <div className="w-full mt-6 border border-blue-500/20 text-blue-400 font-medium py-2 rounded-lg text-sm text-center">
+                    Current Plan
+                  </div>
+                ) : tier === 'exclusive' ? (
+                  <button className="w-full mt-6 border border-white/[0.08] hover:border-white/[0.15] text-slate-300 hover:text-white font-medium py-2 rounded-lg transition-all hover:bg-white/[0.05] cursor-pointer text-sm">
+                    Downgrade
+                  </button>
+                ) : (
+                  <button className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded-lg transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 cursor-pointer text-sm">
+                    Upgrade to Premium
+                  </button>
+                )}
+              </div>
+
+              {/* Exclusive */}
+              <div className={`rounded-xl p-6 border transition-all ${tier === 'exclusive' ? 'bg-purple-500/5 border-purple-500/30 ring-1 ring-purple-500/20' : 'bg-white/[0.03] border-white/[0.06] hover:border-purple-500/20'}`}>
+                {tier === 'exclusive' && <span className="inline-block text-xs font-semibold text-purple-400 uppercase tracking-wider mb-3">Current Plan</span>}
+                <p className="text-sm font-medium text-purple-400 uppercase tracking-wide">Exclusive</p>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-white">$199</span>
+                  <span className="text-slate-500 text-sm">/month</span>
+                </div>
+                <ul className="mt-5 space-y-2.5">
+                  {['Everything in Premium, plus:', '3D attack globe', 'AI-driven analysis', 'Team workspace (5 members)', 'Custom alert rules', 'Dedicated support'].map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-slate-300">
+                      <Check className="w-4 h-4 mt-0.5 text-purple-400 shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                {tier === 'exclusive' ? (
+                  <div className="w-full mt-6 border border-purple-500/20 text-purple-400 font-medium py-2 rounded-lg text-sm text-center">
+                    Current Plan
+                  </div>
+                ) : (
+                  <button className="w-full mt-6 bg-purple-600 hover:bg-purple-500 text-white font-medium py-2 rounded-lg transition-all shadow-lg shadow-purple-600/20 hover:shadow-purple-500/30 cursor-pointer text-sm">
+                    Upgrade to Exclusive
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -132,68 +192,9 @@ export default function Settings() {
                 Change Password
               </button>
             </div>
-            <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-              <div>
-                <p className="text-sm font-medium text-white">Two-Factor Authentication</p>
-                <p className="text-xs text-slate-500 mt-0.5">Add an extra layer of security to your account</p>
-              </div>
-              <button
-                onClick={() => setTwoFA(!twoFA)}
-                className={`relative w-11 h-6 rounded-full transition-colors cursor-pointer ${
-                  twoFA ? 'bg-blue-600' : 'bg-white/[0.1]'
-                }`}
-              >
-                <span
-                  className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                    twoFA ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
           </div>
         )}
 
-        {activeTab === 'notifications' && (
-          <div className="space-y-5 max-w-lg">
-            <h2 className="text-lg font-semibold text-white">Notifications</h2>
-            <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-              <div>
-                <p className="text-sm font-medium text-white">Email Notifications</p>
-                <p className="text-xs text-slate-500 mt-0.5">Receive alert summaries via email</p>
-              </div>
-              <button
-                onClick={() => setEmailNotifications(!emailNotifications)}
-                className={`relative w-11 h-6 rounded-full transition-colors cursor-pointer ${
-                  emailNotifications ? 'bg-blue-600' : 'bg-white/[0.1]'
-                }`}
-              >
-                <span
-                  className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                    emailNotifications ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-            <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-white">Alert Severity Threshold</p>
-                <span className="text-sm text-blue-400 font-medium">{severityThreshold}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={severityThreshold}
-                onChange={(e) => setSeverityThreshold(Number(e.target.value))}
-                className="w-full accent-blue-600 cursor-pointer"
-              />
-              <div className="flex justify-between mt-1 text-xs text-slate-600">
-                <span>Low</span>
-                <span>Critical</span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

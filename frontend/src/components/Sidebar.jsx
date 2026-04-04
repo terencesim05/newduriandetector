@@ -28,7 +28,7 @@ const baseNavItems = [
   { to: '/blacklist', label: 'Blacklist', icon: ShieldBan },
   { to: '/whitelist', label: 'Whitelist', icon: ShieldCheck },
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/attack-globe', label: 'GeoIP Map', icon: Globe, exclusiveOnly: true },
+  { to: '/attack-globe', label: 'GeoIP Map', icon: Globe },
   { to: '/incidents', label: 'Incidents', icon: AlertTriangle },
   { to: '/ml-config', label: 'ML Config', icon: BrainCircuit, premiumOnly: true },
   { to: '/teams', label: 'Teams', icon: Users, exclusiveOnly: true },

@@ -1,7 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './context/AuthContext'
+import { SSEProvider } from './context/SSEContext'
 import DashboardLayout from './layouts/DashboardLayout'
 import AdminLayout from './layouts/AdminLayout'
 import './index.css'
@@ -32,6 +34,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
+      <SSEProvider>
         <Routes>
           <Route path="/" element={<App />} />
           <Route path="/login" element={<Login />} />
@@ -57,6 +60,8 @@ createRoot(document.getElementById('root')).render(
           <Route path="/admin/system" element={<AdminLayout><SystemMonitoring /></AdminLayout>} />
           <Route path="/admin/audit" element={<AdminLayout><AuditLogs /></AdminLayout>} />
         </Routes>
+        <Toaster />
+      </SSEProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

@@ -17,12 +17,14 @@ logApi.interceptors.request.use((config) => {
 });
 
 export const alertService = {
-  async getAlerts({ severity, category, assignment, mlFlagged, page = 1, pageSize = 20 } = {}) {
+  async getAlerts({ severity, category, assignment, mlFlagged, startDate, endDate, page = 1, pageSize = 20 } = {}) {
     const params = { page, page_size: pageSize };
     if (severity && severity !== 'All') params.severity = severity;
     if (category && category !== 'All') params.category = category;
     if (assignment && assignment !== 'All') params.assignment = assignment;
     if (mlFlagged) params.ml_flagged = true;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
     const response = await logApi.get('/api/alerts', { params });
     return response.data;
   },

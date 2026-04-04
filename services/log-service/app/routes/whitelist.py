@@ -5,7 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.auth import get_current_user, CurrentUser
-from app.models.lists import WhitelistEntry
+from sqlalchemy import update
+
+from app.models.alert import Alert
+from app.models.lists import BlacklistEntry, WhitelistEntry
 from app.schemas.lists import ListEntryCreate, BulkImport, WhitelistOut
 from app.utils.scoping import apply_scope
 
@@ -33,6 +36,13 @@ async def add_to_whitelist(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Entry already exists in whitelist")
 
+    # Remove from blacklist if present
+    bl_q = apply_scope(select(BlacklistEntry), BlacklistEntry, user)
+    bl_result = await db.execute(bl_q.where(BlacklistEntry.value == body.value))
+    bl_entry = bl_result.scalar_one_or_none()
+    if bl_entry:
+        await db.delete(bl_entry)
+
     entry = WhitelistEntry(
         entry_type=body.entry_type,
         value=body.value,
@@ -42,6 +52,15 @@ async def add_to_whitelist(
         team_id=user.team_id,
     )
     db.add(entry)
+
+    # Update existing alerts from this IP
+    alert_q = update(Alert).where(Alert.source_ip == body.value).values(is_whitelisted=True, is_blocked=False, threat_score=0.0)
+    if user.tier == "EXCLUSIVE" and user.team_id:
+        alert_q = alert_q.where(Alert.team_id == user.team_id)
+    else:
+        alert_q = alert_q.where(Alert.user_id == user.user_id)
+    await db.execute(alert_q)
+
     await db.commit()
     await db.refresh(entry)
     return WhitelistOut.model_validate(entry)
