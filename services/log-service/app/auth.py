@@ -1,12 +1,17 @@
-"""Lightweight JWT verification reusing the same secret as auth-service."""
+"""JWT + API key authentication for the log service."""
 
 from dataclasses import dataclass
-from fastapi import Depends, HTTPException, status
+from datetime import datetime, timezone
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
-from app.config import settings
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-bearer_scheme = HTTPBearer()
+from app.config import settings
+from app.database import get_db
+
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 @dataclass
@@ -19,9 +24,33 @@ class CurrentUser:
     is_admin: bool = False
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+async def get_current_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
 ) -> CurrentUser:
+    # 1. Try API key from X-API-Key header
+    api_key = request.headers.get("X-API-Key")
+    if api_key:
+        from app.models.api_key import APIKey
+        result = await db.execute(
+            select(APIKey).where(APIKey.key == api_key, APIKey.is_active == True)
+        )
+        key_row = result.scalar_one_or_none()
+        if not key_row:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+        key_row.last_used_at = datetime.now(timezone.utc)
+        await db.commit()
+        return CurrentUser(
+            user_id=key_row.user_id,
+            tier=key_row.tier,
+            team_id=str(key_row.team_id) if key_row.team_id else None,
+            user_name="api-key",
+        )
+
+    # 2. Fall back to JWT Bearer token
+    if not credentials:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authentication")
     token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM])

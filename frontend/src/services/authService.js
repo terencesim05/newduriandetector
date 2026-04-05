@@ -68,6 +68,11 @@ export const authService = {
     return response.data;
   },
 
+  async updateProfile(data) {
+    const response = await authApi.patch('/api/auth/me/', data);
+    return response.data;
+  },
+
   async changeTier(tier) {
     const response = await authApi.post('/api/subscriptions/upgrade/', { tier });
     return response.data;

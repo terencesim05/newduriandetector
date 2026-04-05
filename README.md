@@ -54,7 +54,6 @@ newduriandetector/
 - Automatic token refresh (1 min before expiry)
 - Token blacklisting on logout
 - Protected routes redirect unauthenticated users to login
-- Google OAuth button (UI placeholder)
 
 ### Tier System
 
@@ -107,9 +106,8 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 
 - Welcome greeting with user's first name
 - **Live stats** via SSE: Total Alerts, Critical Alerts, Alerts Today, Blocked — updated every 10 seconds
-- **Live Alert Feed**: last 10 alerts streamed in real-time via SSE, fade-in animation, severity color-coded, time-ago display
+- **Live Alert Feed**: last 10 alerts streamed in real-time via SSE, fade-in animation, severity color-coded, time-ago display, "View all" link to Alerts page
 - **Connection status indicator**: green pulsing "Live" badge when connected, red "Disconnected" with reconnect button
-- Quick Actions: Create Incident, Run Scan, View Reports
 - **My Assignments** widget (EXCLUSIVE only) — shows alerts assigned to the current user
 
 ### Real-Time Alerts (SSE)
@@ -125,6 +123,7 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 - **Auto-reconnect** with exponential backoff (1s → 2s → 4s → 8s → 16s max)
 - JWT passed via query param (EventSource API cannot send headers)
 - **Live feed actions**: Block IP / Trust IP buttons on each alert, dismiss individual or clear all
+- **Persistent dismissals**: dismissed alerts stored in `dismissed_alerts` table — clearing the feed survives page refresh. SSE stream and initial load both exclude dismissed alerts
 
 ### Notifications
 
@@ -160,10 +159,11 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 ### Analytics Page
 
 - **4 charts**: Alerts Over Time (line), Category Distribution (pie), Top Source IPs (bar), Severity Trends (stacked bar)
-- **Chart customization**: each chart has a collapsible "Customize" panel to switch chart type (line/bar/pie), date range (24h/7d/30d/90d), and color scheme (6 palettes)
-- **Global filters**: severity and category dropdowns apply across all charts on Refresh
-- **Export as PNG**: per-chart export button using html2canvas
-- **Export as CSV**: downloads alert time-series data as CSV
+- **Chart subtitles**: plain-English description under each chart explaining what it shows
+- **Inline controls**: each chart has visible "Show as" (line/bar/pie), "Time period" (24h/7d/30d/90d), and "Colors" (6 palettes) dropdowns — no hidden panels
+- **Global filters**: "Risk level" and "Attack type" dropdowns with helper text, apply across all charts on Refresh
+- **Export as PDF**: downloads all 4 charts as a single landscape A4 PDF report with title and timestamp (jsPDF + html2canvas)
+- **Export as PNG**: per-chart "Save image" button
 - **Recharts**: all charts built with Recharts, responsive and styled to dark theme
 
 ### Attack Map (All Tiers)
@@ -178,9 +178,18 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 
 ### Incidents Page
 
-- Filter by status (Open, In Progress, Resolved, Closed)
-- Expandable incident cards showing title, status, priority, assignee, description
-- Create New Incident button
+Investigation reports that group related alerts together. Alerts are automated single events; incidents are human-created cases that wrap multiple alerts for tracking and resolution.
+
+- **Create incident**: title, priority (Critical/High/Medium/Low), description
+- **Filter** by status (Open, In Progress, Resolved, Closed) and priority
+- **Search** incidents by title
+- **Expandable cards**: click to see description, notes timeline, linked alerts count
+- **Status management**: change status via dropdown (Open → In Progress → Resolved → Closed)
+- **Notes timeline**: add investigation notes with author name and timestamp
+- **Link alerts**: paste alert IDs to associate related alerts with an incident; unlink to remove
+- **Delete**: remove incidents with confirmation dialog
+- **Pagination**: server-side with page controls
+- **Multi-tenant**: incidents scoped by user (FREE/PREMIUM) or team (EXCLUSIVE)
 
 ### Teams Page
 
@@ -196,9 +205,10 @@ This applies to: alerts, blacklist, whitelist, quarantine, and threat intel flag
 
 ### Settings Page
 
-- **Profile**: Edit first name, last name (email read-only)
+- **Profile**: Edit first name, last name (email read-only), save button persists to backend via `PATCH /api/auth/me/`
 - **Account**: Side-by-side plan comparison (Free/Premium/Exclusive) with feature lists, pricing, and upgrade/downgrade buttons — current plan highlighted
-- **Security**: Change password button
+- **API Keys**: Generate keys for IDS watcher, full key shown once with copy button, table of existing keys with label/preview/last used/status, revoke button
+- **Security**: Change password with current password verification
 
 ### Admin Panel (Superuser Only)
 
@@ -250,12 +260,14 @@ The **IDS Watcher** service (`services/ids-watcher/`) tails live IDS log files a
 | **Kismet** | REST API polling | Polls `/alerts/last-time/` endpoint for new wireless alerts |
 
 **How it works:**
-1. Configure `config.yaml` — enable the IDS engines running on your network, set file paths, provide a JWT token
-2. Run `python watcher.py` — starts async file tailers for each enabled IDS
-3. New log lines are parsed, batched (configurable size/interval), and POSTed to `POST /api/logs/ingest`
-4. Alerts appear in the dashboard live feed within seconds via SSE
+1. Generate an API key from Settings or via `POST /api/api-keys` with label `"ids-watcher"`
+2. Configure `config.yaml` — paste the API key, enable your IDS engines, set file paths
+3. Run `python watcher.py` — starts async file tailers for each enabled IDS
+4. New log lines are parsed, batched (configurable size/interval), and POSTed to `POST /api/logs/ingest`
+5. Alerts appear in the dashboard live feed within seconds via SSE
 
 **Features:**
+- **API key auth** — never expires, no need to stay logged in. The watcher runs 24/7 independently of user sessions
 - Starts from end of file (only new data, no replay of history)
 - Batched POSTs (default: 50 alerts or 5 seconds, whichever comes first) to reduce API overhead
 - Auto-waits if a log file doesn't exist yet (e.g. IDS hasn't started)
@@ -263,6 +275,24 @@ The **IDS Watcher** service (`services/ids-watcher/`) tails live IDS log files a
 - Kismet uses REST API polling since it doesn't write a flat log file
 
 **Requirements:** the IDS engines must be running and actively writing logs. DurianDetector does not perform packet inspection — it is the analysis/dashboard layer that consumes IDS output.
+
+### API Key Authentication
+
+The log-service supports two authentication methods:
+
+| Method | Use Case | Expiry |
+|--------|----------|--------|
+| **JWT Bearer token** | Frontend, browser sessions, SSE | Short-lived (~30 min), auto-refreshed |
+| **API key (`X-API-Key` header)** | IDS watcher, scripts, automation | Never expires, revocable |
+
+Both methods work on all endpoints. API keys are tied to a user account — alerts ingested via API key are scoped to that user/team just like JWT.
+
+**Key management:**
+- Generate: `POST /api/api-keys` with `{"label": "my-watcher"}` — returns the full key once
+- List: `GET /api/api-keys` — shows masked keys with last-used timestamps
+- Revoke: `DELETE /api/api-keys/{id}` — soft-deletes (marks inactive)
+
+Keys are prefixed with `dd_` for easy identification. The full key is only shown at creation time.
 
 ### Log Ingestion Service
 
@@ -392,7 +422,8 @@ Entries track how many times they've been matched (`block_count` / `trust_count`
 The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compromise) published on ThreatFox. Users can:
 - Browse recent IOCs (configurable: last 1–30 days)
 - Search for specific IPs, domains, or hashes
-- View malware family, threat type, confidence level, tags, and reporter info
+- View malware family, threat type, confidence level, first seen date, tags, and reporter info
+- **Server-side caching**: ThreatFox responses cached for 5 minutes — first load hits the API, subsequent loads are instant. Falls back to stale cache if ThreatFox is unreachable
 
 ## API Endpoints
 
@@ -445,7 +476,9 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 |--------|----------|-------------|
 | GET | `/health` | Health check |
 | POST | `/api/logs/ingest` | Ingest alerts (supports all IDS formats) |
-| GET | `/api/alerts` | List alerts (filterable, paginated) |
+| GET | `/api/alerts` | List alerts (filterable, paginated, `dismissed` param) |
+| POST | `/api/alerts/dismiss-feed` | Dismiss all alerts from live feed |
+| POST | `/api/alerts/{id}/dismiss-feed` | Dismiss a single alert from live feed |
 | GET | `/api/threat-intel/recent` | Live ThreatFox IOC feed |
 | GET | `/api/threat-intel/search` | Search ThreatFox by IP/hash/domain |
 | GET/POST/DELETE | `/api/blacklist` | Manage blacklist entries |
@@ -482,6 +515,18 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | POST | `/api/ingestion-logs/{id}/block` | Block IP from ingestion log (adds to blacklist) |
 | POST | `/api/ingestion-logs/{id}/trust` | Trust IP from ingestion log (adds to whitelist) |
 | POST | `/api/ingestion-logs/{id}/release` | Release ingestion log from quarantine |
+| POST | `/api/api-keys` | Generate a new API key (returns full key once) |
+| GET | `/api/api-keys` | List API keys for current user (masked) |
+| DELETE | `/api/api-keys/{id}` | Revoke an API key |
+| POST | `/api/incidents` | Create a new incident |
+| GET | `/api/incidents` | List incidents (filterable by status/priority, paginated) |
+| GET | `/api/incidents/{id}` | Get incident detail with notes and alert count |
+| PATCH | `/api/incidents/{id}` | Update incident (status, priority, title, description) |
+| DELETE | `/api/incidents/{id}` | Delete an incident |
+| POST | `/api/incidents/{id}/notes` | Add a note to an incident |
+| POST | `/api/incidents/{id}/link-alert` | Link an alert to an incident |
+| DELETE | `/api/incidents/{id}/unlink-alert/{alert_id}` | Unlink an alert from an incident |
+| GET | `/api/incidents/{id}/alerts` | List alerts linked to an incident |
 
 ## Data Models
 
@@ -506,6 +551,10 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 ### Alert (Log Service)
 - Fields: `id` (UUID), `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status`, `quarantined_at`, `reviewed_by`, `review_notes`, `assigned_to`, `assigned_name`, `ml_confidence` (Float, nullable), `geo_latitude` (Float, nullable), `geo_longitude` (Float, nullable), `geo_country` (String, nullable), `detected_at`, `created_at`
 
+### DismissedAlert (Log Service)
+- Tracks which alerts a user has dismissed from the live feed
+- Composite PK: `user_id` (BigInteger) + `alert_id` (UUID), `dismissed_at`
+
 ### IngestionLog (Log Service)
 - Separate table from alerts — stores processed entries from file uploads only
 - Fields: `id` (UUID), `batch_id` (UUID — groups entries from same upload), `upload_filename`, `severity`, `category`, `source_ip`, `destination_ip`, `source_port`, `destination_port`, `protocol`, `threat_score` (0.0–1.0), `ids_source`, `raw_data` (JSONB), `user_id`, `team_id`, `threat_intel` (JSONB), `flagged_by_threatfox`, `is_whitelisted`, `is_blocked`, `quarantine_status`, `quarantined_at`, `reviewed_by`, `review_notes`, `ml_confidence` (Float, nullable), `geo_latitude`, `geo_longitude`, `geo_country`, `detected_at`, `created_at`
@@ -521,6 +570,19 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 
 ### MLConfig (Log Service)
 - Fields: `id` (UUID), `user_id`, `team_id`, `model_type` (random_forest/isolation_forest/neural_network), `enabled`, `confidence_threshold` (0.0–1.0), `sensitivity` (0.0–1.0), `score_boost` (0.0–0.5), `created_at`, `updated_at`
+
+### APIKey (Log Service)
+- Fields: `id` (UUID), `key` (String, unique, prefixed `dd_`), `label`, `user_id`, `team_id`, `tier`, `is_active` (Boolean), `last_used_at` (DateTime, nullable), `created_at`
+
+### Incident (Log Service)
+- Fields: `id` (UUID), `title`, `description` (Text, nullable), `status` (OPEN/IN_PROGRESS/RESOLVED/CLOSED), `priority` (CRITICAL/HIGH/MEDIUM/LOW), `created_by_id`, `created_by_name`, `user_id`, `team_id`, `created_at`, `updated_at`
+
+### IncidentAlert (Log Service)
+- Join table linking incidents to alerts
+- Fields: `incident_id` (UUID, PK), `alert_id` (UUID, PK), `added_at`
+
+### IncidentNote (Log Service)
+- Fields: `id` (UUID), `incident_id` (UUID, FK), `content` (Text), `author_id`, `author_name`, `created_at`
 
 ## Getting Started
 
@@ -724,7 +786,26 @@ Frontend `frontend/.env`:
 - Watcher features: async file tailers (start from EOF), configurable batch size/interval, auto-wait for missing files, multi-IDS concurrent support
 - YAML configuration (`config.yaml`) for API URL, JWT token, per-IDS enable/disable and file paths
 - Created mock Suricata log file (`mock_suricata.json`) with 15 realistic alerts covering SSH brute force, SQL injection, XSS, EternalBlue, Cobalt Strike C2, DGA DNS, Nmap scan, TOR traffic, command injection, and data exfiltration
-- Updated README with Ingestion Logs, Real-Time IDS Monitoring, new API endpoints, IngestionLog data model, and IDS Watcher getting started instructions
+- Built API key authentication for machine-to-machine access (IDS watcher, scripts)
+- `api_keys` table with `dd_` prefixed keys, user scoping, soft revocation, last-used tracking
+- Auth layer (`auth.py`) accepts either JWT Bearer token or `X-API-Key` header — tries API key first, falls back to JWT
+- API key management endpoints: `POST /api/api-keys` (generate), `GET /api/api-keys` (list masked), `DELETE /api/api-keys/{id}` (revoke)
+- Updated IDS watcher to prefer API key auth over JWT, with warning when using expiring tokens
+- Collapsible sidebar sections (Overview, Detection, Intelligence, Policies, Workspace) — auto-opens section containing current page
+- Cleaner analytics page — chart subtitles, inline controls (Show as / Time period / Colors), friendlier filter labels
+- Removed Quick Actions panel from dashboard, removed non-functional search bar from navbar
+- Added "View all" link on live alert feed to navigate to alerts page
+- Built full Incidents system — backend (Incident, IncidentAlert, IncidentNote models) + frontend page with create modal, status management, notes timeline, alert linking, pagination
+- 9 incident API endpoints: CRUD + notes + link/unlink alerts + list linked alerts, all multi-tenant scoped
+- Removed mock incident data, replaced with real persistent backend
+- Built API Keys management UI in Settings — generate with label, show once with copy, table with preview/last used/status, revoke
+- Fixed SSE dismiss persistence — `dismissed_alerts` join table, dismiss endpoints (`POST /dismiss-feed`), SSEContext calls API on dismiss, initial load and SSE stream both exclude dismissed alerts
+- Fixed profile save button — calls `PATCH /api/auth/me/` with loading state and toast feedback
+- Removed notification bell from navbar (was decorative stub)
+- Removed Google OAuth placeholder buttons from Login and Signup pages
+- ThreatFox first_seen field fix — was mapping `first_seen_utc` but API returns `first_seen`
+- Added 5-minute server-side cache on ThreatFox recent IOCs endpoint with stale fallback
+- Analytics PDF export — all 4 charts in a single landscape A4 PDF with title and timestamp (jsPDF)
 
 ## Design
 

@@ -73,3 +73,12 @@ class Alert(Base):
     geo_longitude = Column(Float, nullable=True)
     geo_country = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+class DismissedAlert(Base):
+    """Tracks which alerts a user has dismissed from the live feed."""
+    __tablename__ = "dismissed_alerts"
+
+    user_id = Column(BigInteger, primary_key=True)
+    alert_id = Column(UUID(as_uuid=True), primary_key=True)
+    dismissed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

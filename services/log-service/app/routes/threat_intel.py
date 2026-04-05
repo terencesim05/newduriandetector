@@ -1,4 +1,5 @@
 import logging
+import time
 import httpx
 from fastapi import APIRouter, Depends, Query
 from app.auth import get_current_user, CurrentUser
@@ -10,6 +11,22 @@ router = APIRouter(prefix="/api/threat-intel", tags=["threat-intel"])
 
 THREATFOX_API = "https://threatfox-api.abuse.ch/api/v1/"
 
+# In-memory cache: key = days value, value = (timestamp, response data)
+_ioc_cache: dict[int, tuple[float, list]] = {}
+CACHE_TTL = 300  # 5 minutes
+
+
+def _get_cached(days: int) -> list | None:
+    if days in _ioc_cache:
+        ts, data = _ioc_cache[days]
+        if time.time() - ts < CACHE_TTL:
+            return data
+    return None
+
+
+def _set_cached(days: int, data: list):
+    _ioc_cache[days] = (time.time(), data)
+
 
 @router.get("/recent")
 async def get_recent_iocs(
@@ -17,9 +34,15 @@ async def get_recent_iocs(
     limit: int = Query(100, ge=1, le=500),
     user: CurrentUser = Depends(get_current_user),
 ):
-    """Fetch the latest IOCs from ThreatFox."""
+    """Fetch the latest IOCs from ThreatFox (cached for 5 minutes)."""
     if not settings.THREATFOX_AUTH_KEY:
         return {"iocs": [], "total": 0, "error": "ThreatFox API key not configured"}
+
+    # Check cache first
+    cached = _get_cached(days)
+    if cached is not None:
+        sliced = cached[:limit]
+        return {"iocs": sliced, "total": len(sliced), "cached": True}
 
     try:
         headers = {"Auth-Key": settings.THREATFOX_AUTH_KEY}
@@ -33,12 +56,16 @@ async def get_recent_iocs(
             data = resp.json()
     except Exception as exc:
         logger.warning("ThreatFox get_iocs failed: %s", exc)
+        # Return stale cache if available
+        if days in _ioc_cache:
+            stale = _ioc_cache[days][1][:limit]
+            return {"iocs": stale, "total": len(stale), "cached": True, "stale": True}
         return {"iocs": [], "total": 0, "error": str(exc)}
 
     if data.get("query_status") != "ok" or not data.get("data"):
         return {"iocs": [], "total": 0}
 
-    raw_iocs = data["data"][:limit]
+    raw_iocs = data["data"]
     iocs = []
     for ioc in raw_iocs:
         iocs.append({
@@ -48,14 +75,17 @@ async def get_recent_iocs(
             "threat_type": ioc.get("threat_type"),
             "malware": ioc.get("malware_printable"),
             "confidence_level": ioc.get("confidence_level", 0),
-            "first_seen": ioc.get("first_seen_utc"),
-            "last_seen": ioc.get("last_seen_utc"),
+            "first_seen": ioc.get("first_seen") or ioc.get("first_seen_utc"),
+            "last_seen": ioc.get("last_seen") or ioc.get("last_seen_utc"),
             "reference": ioc.get("reference"),
             "reporter": ioc.get("reporter"),
             "tags": ioc.get("tags") or [],
         })
 
-    return {"iocs": iocs, "total": len(iocs)}
+    # Cache the full result, slice for response
+    _set_cached(days, iocs)
+    sliced = iocs[:limit]
+    return {"iocs": sliced, "total": len(sliced)}
 
 
 @router.get("/search")
@@ -93,8 +123,8 @@ async def search_ioc(
             "threat_type": ioc.get("threat_type"),
             "malware": ioc.get("malware_printable"),
             "confidence_level": ioc.get("confidence_level", 0),
-            "first_seen": ioc.get("first_seen_utc"),
-            "last_seen": ioc.get("last_seen_utc"),
+            "first_seen": ioc.get("first_seen") or ioc.get("first_seen_utc"),
+            "last_seen": ioc.get("last_seen") or ioc.get("last_seen_utc"),
             "reference": ioc.get("reference"),
             "reporter": ioc.get("reporter"),
             "tags": ioc.get("tags") or [],

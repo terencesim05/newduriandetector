@@ -1,11 +1,12 @@
+import uuid
 from datetime import datetime
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Path
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.auth import get_current_user, CurrentUser
-from app.models.alert import Alert, Severity, Category
+from app.models.alert import Alert, Severity, Category, DismissedAlert
 from app.schemas.alert import AlertOut, AlertListResponse
 from app.utils.scoping import apply_scope
 
@@ -20,6 +21,7 @@ async def list_alerts(
     end_date: datetime | None = Query(None),
     assignment: str | None = Query(None),  # "mine", "unassigned", or None for all
     ml_flagged: bool | None = Query(None),  # True = ml_confidence > 0.7
+    dismissed: bool | None = Query(None),  # False = exclude dismissed from feed
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     user: CurrentUser = Depends(get_current_user),
@@ -41,6 +43,12 @@ async def list_alerts(
         base = base.where(Alert.assigned_to.is_(None))
     if ml_flagged:
         base = base.where(Alert.ml_confidence > 0.7)
+    if dismissed is False:
+        dismissed_ids = select(DismissedAlert.alert_id).where(DismissedAlert.user_id == user.user_id)
+        base = base.where(Alert.id.notin_(dismissed_ids))
+    elif dismissed is True:
+        dismissed_ids = select(DismissedAlert.alert_id).where(DismissedAlert.user_id == user.user_id)
+        base = base.where(Alert.id.in_(dismissed_ids))
 
     count_q = select(func.count()).select_from(base.subquery())
     total = (await db.execute(count_q)).scalar() or 0
@@ -58,3 +66,36 @@ async def list_alerts(
         page=page,
         page_size=page_size,
     )
+
+
+@router.post("/dismiss-feed", status_code=204)
+async def dismiss_all_from_feed(
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Dismiss all current alerts from the live feed."""
+    base = apply_scope(select(Alert.id), Alert, user)
+    dismissed_ids = select(DismissedAlert.alert_id).where(DismissedAlert.user_id == user.user_id)
+    base = base.where(Alert.id.notin_(dismissed_ids))
+    result = await db.execute(base)
+    for aid in result.scalars().all():
+        db.add(DismissedAlert(user_id=user.user_id, alert_id=aid))
+    await db.commit()
+
+
+@router.post("/{alert_id}/dismiss-feed", status_code=204)
+async def dismiss_one_from_feed(
+    alert_id: uuid.UUID = Path(...),
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Dismiss a single alert from the live feed."""
+    existing = await db.execute(
+        select(DismissedAlert).where(
+            DismissedAlert.user_id == user.user_id,
+            DismissedAlert.alert_id == alert_id,
+        )
+    )
+    if not existing.scalar_one_or_none():
+        db.add(DismissedAlert(user_id=user.user_id, alert_id=alert_id))
+        await db.commit()

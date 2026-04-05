@@ -3,9 +3,16 @@
 
 api:
   url: "http://localhost:8001"
-  # JWT access token for the user account that should own the ingested alerts.
-  # Generate one via POST /api/auth/login/ and paste the accessToken here.
-  token: "YOUR_JWT_ACCESS_TOKEN"
+
+  # Authentication — use ONE of the following:
+
+  # Option 1 (recommended): API key — never expires, generated from Settings page
+  # or via POST /api/api-keys with a label like "ids-watcher".
+  api_key: ""
+
+  # Option 2: JWT access token — works but expires after ~30 minutes.
+  # Only use this for quick testing. For production, use an API key.
+  token: ""
 
 # Batch settings — the watcher groups new lines and POSTs them in batches.
 batch:

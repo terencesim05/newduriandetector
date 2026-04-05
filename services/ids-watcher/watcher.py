@@ -43,12 +43,17 @@ def load_config(path: str) -> dict:
 class APIClient:
     """Batches alerts and POSTs them to the DurianDetector log-service."""
 
-    def __init__(self, base_url: str, token: str, batch_size: int, batch_interval: float):
+    def __init__(self, base_url: str, api_key: str, token: str, batch_size: int, batch_interval: float):
         self.url = f"{base_url.rstrip('/')}/api/logs/ingest"
-        self.headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        }
+        self.headers = {"Content-Type": "application/json"}
+        if api_key:
+            self.headers["X-API-Key"] = api_key
+            log.info("Authenticating with API key")
+        elif token:
+            self.headers["Authorization"] = f"Bearer {token}"
+            log.warning("Authenticating with JWT token — this will expire. Use an API key for production.")
+        else:
+            log.error("No API key or token configured. Requests will fail.")
         self.batch_size = batch_size
         self.batch_interval = batch_interval
         self._queue: asyncio.Queue = asyncio.Queue()
@@ -267,6 +272,7 @@ async def main(config_path: str):
     batch_cfg = cfg.get("batch", {})
     client = APIClient(
         base_url=api_cfg.get("url", "http://localhost:8001"),
+        api_key=api_cfg.get("api_key", ""),
         token=api_cfg.get("token", ""),
         batch_size=batch_cfg.get("size", 50),
         batch_interval=batch_cfg.get("interval", 5),

@@ -81,7 +81,7 @@ export function SSEProvider({ children }) {
     if (!token) return;
     try {
       const res = await axios.get(`${API_CONFIG.LOG_BASE_URL}/api/alerts`, {
-        params: { page: 1, page_size: 10 },
+        params: { page: 1, page_size: 10, dismissed: false },
         headers: { Authorization: `Bearer ${token}` },
       });
       const existing = (res.data.alerts || []).map((a) => ({
@@ -133,10 +133,22 @@ export function SSEProvider({ children }) {
 
   const dismissAlert = useCallback((alertId) => {
     setAlerts((prev) => prev.filter((a) => a.id !== alertId));
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      axios.post(`${API_CONFIG.LOG_BASE_URL}/api/alerts/${alertId}/dismiss-feed`, null, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
   }, []);
 
   const dismissAllAlerts = useCallback(() => {
     setAlerts([]);
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      axios.post(`${API_CONFIG.LOG_BASE_URL}/api/alerts/dismiss-feed`, null, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
   }, []);
 
   return (

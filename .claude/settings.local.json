@@ -22,7 +22,14 @@
       "Bash(curl -s https://threatfox.abuse.ch/api/)",
       "Bash(mkdir -p \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/app/ml\")",
       "Bash(mkdir -p \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/models\")",
-      "Bash(grep -E \"\\\\.json$|50m|110m\")"
+      "Bash(grep -E \"\\\\.json$|50m|110m\")",
+      "Bash(py:*)",
+      "Bash(git checkout:*)",
+      "Bash(git clean:*)",
+      "WebSearch",
+      "WebFetch(domain:threatfox-api.abuse.ch)",
+      "WebFetch(domain:threatfox.abuse.ch)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

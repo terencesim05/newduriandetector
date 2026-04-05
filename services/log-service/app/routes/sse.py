@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import async_session
 from app.auth import CurrentUser
-from app.models.alert import Alert
+from app.models.alert import Alert, DismissedAlert
 from app.utils.scoping import apply_scope
 from app.config import settings
 from jose import JWTError, jwt
@@ -113,8 +113,11 @@ async def _event_generator(user: CurrentUser):
 
             # Check for new alerts
             async with async_session() as db:
+                dismissed_ids = select(DismissedAlert.alert_id).where(
+                    DismissedAlert.user_id == user.user_id
+                )
                 query = apply_scope(
-                    select(Alert).where(Alert.created_at > last_check),
+                    select(Alert).where(Alert.created_at > last_check).where(Alert.id.notin_(dismissed_ids)),
                     Alert, user,
                 ).order_by(Alert.created_at.asc())
 

@@ -7,6 +7,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { alertService } from '../services/alertService';
 
 // ── Color palettes ──
@@ -259,17 +260,62 @@ export default function Analytics() {
 
   const handleApplyAll = () => fetchAll();
 
-  // CSV export
-  const exportCSV = (data, filename) => {
-    if (!data.length) return;
-    const keys = Object.keys(data[0]);
-    const csv = [keys.join(','), ...data.map(r => keys.map(k => r[k]).join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = URL.createObjectURL(blob);
-    link.click();
-    URL.revokeObjectURL(link.href);
+  // PDF export — captures all 4 charts into a single PDF
+  const [exporting, setExporting] = useState(false);
+  const exportPDF = async () => {
+    setExporting(true);
+    try {
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 15;
+
+      pdf.setFontSize(18);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFillColor(10, 14, 26);
+      pdf.rect(0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight(), 'F');
+      pdf.text('DurianDetector — Analytics Report', margin, 20);
+      pdf.setFontSize(10);
+      pdf.setTextColor(150, 150, 150);
+      pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, 28);
+
+      const charts = [
+        { ref: timeRef, title: CHART_INFO.time.title },
+        { ref: catRef, title: CHART_INFO.category.title },
+        { ref: srcRef, title: CHART_INFO.source.title },
+        { ref: sevRef, title: CHART_INFO.severity.title },
+      ];
+
+      let y = 38;
+      for (let i = 0; i < charts.length; i++) {
+        const { ref, title } = charts[i];
+        if (!ref.current) continue;
+
+        if (i > 0 && i % 2 === 0) {
+          pdf.addPage();
+          pdf.setFillColor(10, 14, 26);
+          pdf.rect(0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight(), 'F');
+          y = 15;
+        }
+
+        const canvas = await html2canvas(ref.current, { backgroundColor: '#0a0e1a', scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - margin * 2;
+        const imgHeight = (canvas.height / canvas.width) * imgWidth;
+
+        pdf.setFontSize(11);
+        pdf.setTextColor(200, 200, 200);
+        pdf.text(title, margin, y);
+        y += 4;
+        pdf.addImage(imgData, 'PNG', margin, y, imgWidth, Math.min(imgHeight, 80));
+        y += Math.min(imgHeight, 80) + 10;
+      }
+
+      pdf.save('duriandetector-analytics.pdf');
+    } catch {
+      // Silent fail
+    } finally {
+      setExporting(false);
+    }
   };
 
   const selectClass = 'bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-blue-500/40 transition-all cursor-pointer appearance-none';
@@ -283,9 +329,9 @@ export default function Analytics() {
           <h1 className="text-2xl font-bold text-white">Analytics</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => exportCSV(timeData, 'alerts-time-series.csv')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/[0.08] text-sm text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer" title="Download alert data as a spreadsheet file">
-            <Download className="w-4 h-4" />
-            Download data
+          <button onClick={exportPDF} disabled={exporting || loading} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/[0.08] text-sm text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Download all charts as a PDF report">
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {exporting ? 'Generating...' : 'Download PDF'}
           </button>
           <button onClick={handleApplyAll} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-sm text-white font-medium hover:bg-blue-500 transition-colors cursor-pointer" title="Reload all charts with current filters">
             <RotateCcw className="w-4 h-4" />
