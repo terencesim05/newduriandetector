@@ -377,12 +377,12 @@ function App() {
               <ul className="mt-8 space-y-3">
                 {[
                   'Everything in Premium, plus:',
-                  '3D attack globe',
+                  'GeoIP attack map',
                   'AI-driven analysis',
-                  'Team workspace',
+                  'Team workspace (5 members)',
                   'Custom alert rules',
                   'Advanced reporting & export',
-                  'Dedicated account manager',
+                  'Dedicated support',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-sm text-slate-300">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-4 mt-0.5 text-slate-500 shrink-0">

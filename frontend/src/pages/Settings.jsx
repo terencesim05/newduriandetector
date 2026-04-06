@@ -483,7 +483,7 @@ export default function Settings() {
                 <p className="text-sm font-medium text-purple-400 uppercase tracking-wide">Exclusive</p>
                 <div className="mt-2 flex items-baseline gap-1"><span className="text-3xl font-bold text-white">$199</span><span className="text-slate-500 text-sm">/month</span></div>
                 <ul className="mt-5 space-y-2.5">
-                  {['Everything in Premium, plus:', 'AI-driven analysis', 'Team workspace (5 members)', 'Custom alert rules', 'Dedicated support'].map((item) => (
+                  {['Everything in Premium, plus:', 'GeoIP attack map', 'AI-driven analysis', 'Team workspace (5 members)', 'Custom alert rules', 'Dedicated support'].map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-slate-300"><Check className="w-4 h-4 mt-0.5 text-purple-400 shrink-0" />{item}</li>
                   ))}
                 </ul>

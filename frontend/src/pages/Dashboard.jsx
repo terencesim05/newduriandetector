@@ -5,6 +5,7 @@ import { useSSE } from '../context/SSEContext';
 import { useAlertNotifications } from '../hooks/useAlertNotifications.jsx';
 import LiveAlertFeed from '../components/LiveAlertFeed';
 import ConnectionStatus from '../components/ConnectionStatus';
+import { Link } from 'react-router-dom';
 import {
   Bell,
   AlertTriangle,
@@ -12,6 +13,7 @@ import {
   Activity,
   ArrowRight,
   UserCheck,
+  Bot,
 } from 'lucide-react';
 
 const severityColors = {
@@ -90,6 +92,25 @@ export default function Dashboard() {
 
       {/* Live Alert Feed */}
       <LiveAlertFeed alerts={liveAlerts} connected={connected} onDismiss={dismissAlert} onDismissAll={dismissAllAlerts} />
+
+      {/* DurianBot widget */}
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 hover:border-blue-500/20 transition-all">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0">
+            <Bot className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-semibold text-white flex items-center gap-2">
+              DurianBot
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/20">AI</span>
+            </h3>
+            <p className="text-sm text-slate-400 mt-0.5">Ask about your alerts, block IPs, create incidents, or get a threat summary.</p>
+          </div>
+          <Link to="/chatbot" className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 flex items-center gap-1.5">
+            Open Chat <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
 
       {/* My Assignments — EXCLUSIVE only */}
       {isExclusive && myAlerts.length > 0 && (

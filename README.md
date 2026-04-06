@@ -932,6 +932,27 @@ Each config uses a different API key, so alerts are routed to the correct client
 - Subscription plans table created in database (`subscription_plans`, `subscriptions` tables)
 - Landing page fixes: "Get Started Free" CTA button now links to signup page, removed non-functional "View Documentation" button
 - Removed non-functional notification bell button from admin layout header
+- Built DurianBot AI chatbot powered by Google Gemini (free tier)
+- Backend: `POST /api/chat` endpoint — gathers user's alert context (stats, severity breakdown, top IPs, top categories, recent critical alerts), sends to Gemini with system prompt, returns natural language response
+- Gemini integration via direct REST API call (no SDK dependency) — uses `gemini-2.5-flash` model
+- System prompt instructs Gemini to act as a security analyst, only reference provided data, keep responses actionable
+- Context gathering: total alerts, 24h/7d counts, severity breakdown, top 5 categories, top 5 source IPs with avg threat scores, last 5 critical alerts with geo data, blocked/quarantined counts
+- Conversation history support — sends last 10 messages for multi-turn context
+- Chat UI: full-page chat interface with message bubbles, markdown rendering (bold, code blocks, bullet points, headings), typing indicator with bouncing dots, auto-scroll, auto-resize textarea
+- Suggestion chips on first load: "How many critical alerts do I have?", "What are the top attack sources?", etc.
+- Tier gating: Free users get DurianBot Basic (5 messages per session with countdown), Premium/Exclusive get unlimited
+- Added `GEMINI_API_KEY` to env config and log-service settings
+- Sidebar: "DurianBot" link (Bot icon) in Workspace section, visible to all tiers
+- Error handling: rate limit (429), connection failure, missing API key — all shown inline in chat
+- Added Gemini function calling (tool use) — DurianBot can now take actions, not just answer questions
+- 7 tools: `get_stats`, `get_alerts`, `block_ip`, `trust_ip`, `create_incident`, `get_blacklist`, `get_whitelist`
+- Read tools (get_stats, get_alerts, get_blacklist, get_whitelist) execute immediately
+- Write tools (block_ip, trust_ip, create_incident) require user confirmation — bot asks "Should I proceed?" before executing
+- Tool execution: bot calls Gemini → Gemini returns function call → backend executes it → sends result back to Gemini → Gemini formats natural language response
+- block_ip: adds to blacklist, removes from whitelist if present, marks all existing alerts from that IP as blocked
+- trust_ip: adds to whitelist, removes from blacklist if present
+- create_incident: creates incident with title, description, priority
+- Action badge on chat messages — green "Action: Blocked IP" tag when a destructive action was taken
 
 ## Design
 

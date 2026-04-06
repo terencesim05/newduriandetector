@@ -20,6 +20,7 @@ import {
   FileUp,
   ChevronDown,
   X,
+  Bot,
 } from 'lucide-react';
 
 const navSections = [
@@ -158,6 +159,25 @@ export default function Sidebar({ open, onClose }) {
               onClose={onClose}
             />
           ))}
+
+          {/* DurianBot — standalone */}
+          <div className="pt-2 mt-2 border-t border-white/[0.06]">
+            <NavLink
+              to="/chatbot"
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05] border border-transparent'
+                }`
+              }
+            >
+              <Bot className="w-[18px] h-[18px] shrink-0" />
+              DurianBot
+              <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/20">AI</span>
+            </NavLink>
+          </div>
         </nav>
 
         {/* User profile */}

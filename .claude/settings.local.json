@@ -34,7 +34,11 @@
       "Bash(grep -n '<button' layouts/AdminLayout.jsx pages/admin/*.jsx)",
       "Bash(ls -la pages/*.jsx pages/admin/*.jsx)",
       "Bash(/c/Users/Terence01/AppData/Local/Python/bin/python3.exe manage.py makemigrations subscriptions)",
-      "Bash(/c/Users/Terence01/AppData/Local/Python/bin/python3.exe:*)"
+      "Bash(/c/Users/Terence01/AppData/Local/Python/bin/python3.exe:*)",
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(grep -r \"NotImplemented\\\\|pass\\\\s*$\\\\|TODO\\\\|FIXME\" /c/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/app/routes/*.py)",
+      "Bash(grep:*)"
     ]
   }
 }

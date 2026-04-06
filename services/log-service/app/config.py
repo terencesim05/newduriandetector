@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "")
     THREATFOX_AUTH_KEY: str = os.getenv("THREATFOX_AUTH_KEY", "")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     ALGORITHM: str = "HS256"
 
     @property
