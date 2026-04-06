@@ -414,15 +414,12 @@ function App() {
                 Deploy DurianDetector in minutes and start seeing your IDS alerts in a whole new way.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-                <button className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white font-medium px-7 py-3 rounded-lg transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 cursor-pointer">
+                <Link to="/signup" className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white font-medium px-7 py-3 rounded-lg transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 cursor-pointer">
                   Get Started Free
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-4 ml-2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                   </svg>
-                </button>
-                <button className="inline-flex items-center justify-center border border-white/10 hover:border-white/20 text-slate-300 hover:text-white font-medium px-7 py-3 rounded-lg transition-all hover:bg-white/5 cursor-pointer">
-                  View Documentation
-                </button>
+                </Link>
               </div>
             </div>
           </div>
