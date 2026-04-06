@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
-import { User, Shield, CreditCard, Key, Check, Loader2, Eye, EyeOff, Copy, Trash2 } from 'lucide-react';
+import { User, Shield, CreditCard, Key, Check, Loader2, Eye, EyeOff, Copy, Trash2, Calendar, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { API_CONFIG } from '../config/api';
@@ -227,6 +227,29 @@ export default function Settings() {
   const [tierSuccess, setTierSuccess] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Subscription upgrade modal state
+  const [upgradeModal, setUpgradeModal] = useState(null); // null or tier name
+  const [durationMonths, setDurationMonths] = useState(1);
+
+  // Current subscription info
+  const [subscription, setSubscription] = useState(null);
+  const [subLoading, setSubLoading] = useState(true);
+
+  // Renew modal state
+  const [renewModal, setRenewModal] = useState(false);
+  const [renewDuration, setRenewDuration] = useState(1);
+  const [renewing, setRenewing] = useState(false);
+
+  useEffect(() => {
+    if (tier !== 'free') {
+      authService.getMySubscription().then((data) => {
+        setSubscription(data.subscription);
+      }).catch(() => {}).finally(() => setSubLoading(false));
+    } else {
+      setSubLoading(false);
+    }
+  }, [tier]);
+
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
@@ -240,25 +263,80 @@ export default function Settings() {
 
   const handleTierChange = async (newTier) => {
     const action = ['premium', 'exclusive'].indexOf(newTier) > ['premium', 'exclusive'].indexOf(tier) ? 'upgrade' : 'downgrade';
-    const confirmed = window.confirm(
-      `Are you sure you want to ${action} to ${newTier.charAt(0).toUpperCase() + newTier.slice(1)}?${action === 'downgrade' && tier === 'exclusive' ? '\n\nWarning: Downgrading from Exclusive will dissolve your team.' : ''}`
-    );
-    if (!confirmed) return;
 
+    // Downgrade to free — no subscription needed, just confirm
+    if (newTier === 'free') {
+      const confirmed = window.confirm(
+        `Are you sure you want to downgrade to Free?${tier === 'exclusive' ? '\n\nWarning: Downgrading from Exclusive will dissolve your team.' : ''}`
+      );
+      if (!confirmed) return;
+      setChangingTier(newTier);
+      setTierError('');
+      setTierSuccess('');
+      try {
+        await authService.changeTier(newTier);
+        await refreshUser();
+        setSubscription(null);
+        setTierSuccess('Successfully downgraded to Free.');
+      } catch (err) {
+        await refreshUser();
+        setTierError(err.response?.data?.detail || 'Failed to downgrade.');
+      } finally { setChangingTier(null); }
+      return;
+    }
+
+    // Paid tier — show upgrade modal with duration picker
+    setUpgradeModal(newTier);
+    setDurationMonths(1);
+  };
+
+  const handleUpgradeConfirm = async () => {
+    const newTier = upgradeModal;
     setChangingTier(newTier);
     setTierError('');
     setTierSuccess('');
     try {
-      await authService.changeTier(newTier);
+      const data = await authService.changeTier(newTier, durationMonths);
       await refreshUser();
-      setTierSuccess(`Successfully ${action}d to ${newTier.charAt(0).toUpperCase() + newTier.slice(1)}!`);
+      setSubscription({
+        status: data.subscription_status,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        duration_months: data.duration_months,
+      });
+      setTierSuccess(`Successfully subscribed to ${newTier.charAt(0).toUpperCase() + newTier.slice(1)}!`);
+      setUpgradeModal(null);
     } catch (err) {
       await refreshUser();
-      setTierError(err.response?.data?.detail || `Failed to ${action}. Please try again.`);
-    } finally {
-      setChangingTier(null);
-    }
+      setTierError(err.response?.data?.detail || 'Failed to upgrade.');
+    } finally { setChangingTier(null); }
   };
+
+  const handleRenew = async () => {
+    setRenewing(true);
+    setTierError('');
+    try {
+      const data = await authService.renewSubscription(renewDuration);
+      await refreshUser();
+      setSubscription({
+        status: data.subscription_status,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        duration_months: data.duration_months,
+      });
+      setTierSuccess('Subscription renewed successfully!');
+      setRenewModal(false);
+    } catch (err) {
+      setTierError(err.response?.data?.detail || 'Failed to renew.');
+    } finally { setRenewing(false); }
+  };
+
+  const durations = [
+    { value: 1, label: '1 Month' },
+    { value: 3, label: '3 Months' },
+    { value: 6, label: '6 Months' },
+    { value: 12, label: '12 Months' },
+  ];
 
   const inputClass =
     'w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-600 outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20 transition-all';
@@ -323,6 +401,38 @@ export default function Settings() {
             {tierError && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">{tierError}</div>}
             {tierSuccess && <div className="bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3 text-sm text-green-400">{tierSuccess}</div>}
 
+            {/* Current subscription info */}
+            {tier !== 'free' && subscription && (
+              <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-400" />Current Subscription</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div>
+                    <span className="text-xs text-slate-500 block">Status</span>
+                    <span className={`text-sm font-semibold ${subscription.status === 'active' ? 'text-emerald-400' : subscription.status === 'pending' ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {subscription.status?.charAt(0).toUpperCase() + subscription.status?.slice(1)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-500 block">Duration</span>
+                    <span className="text-sm text-white">{subscription.duration_months} month{subscription.duration_months > 1 ? 's' : ''}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-500 block">Start Date</span>
+                    <span className="text-sm text-white">{subscription.start_date ? new Date(subscription.start_date).toLocaleDateString() : '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-500 block">End Date</span>
+                    <span className="text-sm text-white">{subscription.end_date ? new Date(subscription.end_date).toLocaleDateString() : '—'}</span>
+                  </div>
+                </div>
+                {subscription.status === 'expired' && (
+                  <button onClick={() => { setRenewModal(true); setRenewDuration(1); }} className="mt-4 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-5 py-2 rounded-lg transition-all shadow-lg shadow-blue-600/20 cursor-pointer flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4" />Renew Subscription
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="grid md:grid-cols-3 gap-4">
               {/* Free */}
               <div className={`rounded-xl p-6 border transition-all ${tier === 'free' ? 'bg-gray-500/5 border-gray-400/30 ring-1 ring-gray-400/20' : 'bg-white/[0.03] border-white/[0.06] hover:border-white/[0.1]'}`}>
@@ -386,6 +496,112 @@ export default function Settings() {
                 )}
               </div>
             </div>
+
+            {/* Upgrade Modal */}
+            {upgradeModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setUpgradeModal(null)}>
+                <div className="bg-[#0f1219] border border-white/[0.08] rounded-2xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="text-lg font-semibold text-white mb-1">Subscribe to {upgradeModal.charAt(0).toUpperCase() + upgradeModal.slice(1)}</h3>
+                  <p className="text-sm text-slate-400 mb-5">Choose your subscription duration. Service starts immediately.</p>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Duration</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {durations.map((d) => (
+                          <button key={d.value} type="button" onClick={() => setDurationMonths(d.value)}
+                            className={`rounded-lg px-2 py-2.5 text-center transition-all cursor-pointer text-xs font-medium ${
+                              durationMonths === d.value
+                                ? 'bg-blue-500/15 border border-blue-500/30 text-blue-400'
+                                : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:border-white/[0.1]'
+                            }`}>
+                            {d.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-400">Plan</span>
+                        <span className="text-white font-medium">{upgradeModal.charAt(0).toUpperCase() + upgradeModal.slice(1)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm mt-1.5">
+                        <span className="text-slate-400">Duration</span>
+                        <span className="text-white">{durationMonths} month{durationMonths > 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="flex justify-between text-sm mt-1.5">
+                        <span className="text-slate-400">Total</span>
+                        <span className="text-white font-semibold">${(upgradeModal === 'premium' ? 49 : 199) * durationMonths}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-5">
+                    <button onClick={() => setUpgradeModal(null)} className="flex-1 border border-white/[0.08] hover:border-white/[0.15] text-slate-300 hover:text-white font-medium py-2.5 rounded-lg transition-all hover:bg-white/[0.05] cursor-pointer text-sm">
+                      Cancel
+                    </button>
+                    <button onClick={handleUpgradeConfirm} disabled={changingTier} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-all shadow-lg shadow-blue-600/20 cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                      {changingTier && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Renew Modal */}
+            {renewModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setRenewModal(false)}>
+                <div className="bg-[#0f1219] border border-white/[0.08] rounded-2xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="text-lg font-semibold text-white mb-1">Renew Subscription</h3>
+                  <p className="text-sm text-slate-400 mb-5">Choose your renewal duration. Service starts immediately.</p>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Duration</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {durations.map((d) => (
+                          <button key={d.value} type="button" onClick={() => setRenewDuration(d.value)}
+                            className={`rounded-lg px-2 py-2.5 text-center transition-all cursor-pointer text-xs font-medium ${
+                              renewDuration === d.value
+                                ? 'bg-blue-500/15 border border-blue-500/30 text-blue-400'
+                                : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:border-white/[0.1]'
+                            }`}>
+                            {d.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-400">Plan</span>
+                        <span className="text-white font-medium">{tier.charAt(0).toUpperCase() + tier.slice(1)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm mt-1.5">
+                        <span className="text-slate-400">Duration</span>
+                        <span className="text-white">{renewDuration} month{renewDuration > 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="flex justify-between text-sm mt-1.5">
+                        <span className="text-slate-400">Total</span>
+                        <span className="text-white font-semibold">${(tier === 'premium' ? 49 : 199) * renewDuration}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-5">
+                    <button onClick={() => setRenewModal(false)} className="flex-1 border border-white/[0.08] hover:border-white/[0.15] text-slate-300 hover:text-white font-medium py-2.5 rounded-lg transition-all hover:bg-white/[0.05] cursor-pointer text-sm">
+                      Cancel
+                    </button>
+                    <button onClick={handleRenew} disabled={renewing} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-all shadow-lg shadow-blue-600/20 cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                      {renewing && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Renew
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -631,6 +631,109 @@ Frontend `frontend/.env`:
 - `VITE_AUTH_API_URL` — Auth service URL (default: `http://localhost:8000`)
 - `VITE_LOG_API_URL` — Log service URL (default: `http://localhost:8001`)
 
+## Deployment Architecture
+
+DurianDetector is a cloud-hosted platform. The backend services and frontend are deployed online, while each client runs a lightweight IDS watcher on their own network.
+
+```
+YOUR CLOUD (deployed online)
+┌─────────────────────────────────────┐
+│  Vercel/Netlify    → Frontend       │
+│  Railway/Render    → Auth Service   │
+│  Railway/Render    → Log Service    │
+│  Supabase          → Database       │
+└─────────────────────────────────────┘
+              ▲               ▲
+              │ HTTPS         │ HTTPS
+              │               │
+┌─────────────┴───┐   ┌──────┴──────────┐
+│ ABC Corp Office  │   │ DEF Corp Office  │
+│                  │   │                  │
+│ Suricata/Snort   │   │ Suricata/Zeek    │
+│      ↓           │   │      ↓           │
+│ IDS Watcher      │   │ IDS Watcher      │
+│ (api_key: abc..) │   │ (api_key: def..) │
+└──────────────────┘   └──────────────────┘
+```
+
+### How It Works
+
+1. **Your platform** (auth-service, log-service, frontend) is deployed to the cloud and accessible via a public URL (e.g. `https://duriandetector.com`, `https://api.duriandetector.com`)
+2. **Each client** (company/team) registers on your website, picks a subscription plan (1/3/6/12 months), and activates their subscription
+3. The client generates an **API key** from their Settings page
+4. The client installs the **IDS watcher** on their own network — this is the only component that runs on the client side
+5. The watcher reads alerts from their local IDS (Suricata, Snort, Zeek, Kismet) and pushes them over HTTPS to your cloud log-service using the API key
+6. Alerts are stored in the database, scoped to that client's user/team — no other client can see them
+7. The client logs into the dashboard from any browser to view their alerts, analytics, incidents, etc.
+
+### Client Setup Guide
+
+After a client registers and activates their subscription:
+
+**Step 1 — Generate an API key**
+
+Go to Settings → API Keys → Generate. Copy the key (it's only shown once).
+
+**Step 2 — Install the IDS watcher**
+
+On the machine running the IDS engine:
+
+```bash
+git clone <watcher-repo-or-download>
+cd ids-watcher
+pip install -r requirements.txt
+```
+
+**Step 3 — Configure the watcher**
+
+Edit `config.yaml`:
+
+```yaml
+api_url: https://api.duriandetector.com   # your deployed log-service URL
+api_key: dd_xxxxxxxxxxxxxxxx               # API key from Step 1
+
+suricata:
+  enabled: true
+  log_path: /var/log/suricata/eve.json     # path to your Suricata EVE log
+
+zeek:
+  enabled: false
+snort:
+  enabled: false
+kismet:
+  enabled: false
+```
+
+Enable only the IDS engines you use and set the correct log file paths.
+
+**Step 4 — Run the watcher**
+
+```bash
+python watcher.py
+```
+
+The watcher will tail the IDS log files, batch alerts, and POST them to the log-service. Alerts appear on the client's dashboard in real time via SSE.
+
+### Multiple Clients on One Machine
+
+If two clients share the same machine (e.g. a shared MSSP server), run two watcher instances with separate configs:
+
+```bash
+python watcher.py --config config-client-abc.yaml
+python watcher.py --config config-client-def.yaml
+```
+
+Each config uses a different API key, so alerts are routed to the correct client's dashboard. Both watchers can read from the same IDS log files — the API key determines data ownership.
+
+### Subscription Lifecycle
+
+- **Free tier** — always active, no subscription required
+- **Premium / Exclusive** — requires an active subscription (1, 3, 6, or 12 months)
+- Subscription starts immediately upon activation
+- When a subscription expires, the client's dashboard is blocked and alert ingestion stops (API key returns 403)
+- Data is preserved — renewing restores access to all existing alerts and features
+- For Exclusive teams, the team leader's subscription covers all team members
+
 ## Development Log
 
 ### March 29 — Project Init
@@ -806,6 +909,29 @@ Frontend `frontend/.env`:
 - ThreatFox first_seen field fix — was mapping `first_seen_utc` but API returns `first_seen`
 - Added 5-minute server-side cache on ThreatFox recent IOCs endpoint with stale fallback
 - Analytics PDF export — all 4 charts in a single landscape A4 PDF with title and timestamp (jsPDF)
+
+### April 6 — Subscription Lifecycle, Landing Page Fixes
+- Built subscription lifecycle with duration-based plans — users select 1, 3, 6, or 12-month subscription durations when upgrading to Premium or Exclusive
+- Subscriptions always start immediately upon activation — no deferred start dates
+- Subscription status transitions: `active` (during subscription) → `expired` (past end date), auto-refreshed on every login and API call
+- Updated `Subscription` model with `duration_months`, `start_date`, computed `end_date`, and `refresh_status()` method for time-based transitions
+- Added `subscription_status` and `subscription_end_date` to JWT token claims — both auth-service and log-service now aware of subscription state
+- Built subscription enforcement in `DashboardLayout` — different block screens for new signups vs expired users:
+  - New signups (no subscription record): "Activate Your Subscription" screen with inline duration picker and activate button
+  - Expired users (had a subscription that ended): "Subscription Expired" screen with expiry date and renewal option
+  - Both screens include duration selector (1/3/6/12 months) and price summary
+- Added `require_active_subscription` dependency in log-service — gates alert ingestion endpoint, returns 403 with subscription status message for expired users
+- API key authentication also blocked when subscription is expired (through JWT claim propagation)
+- For EXCLUSIVE teams, subscription is tied to the team leader — all team members inherit the leader's subscription status
+- FREE tier users exempt from subscription checks (always active)
+- Updated Settings Account tab with current subscription info panel showing status, duration, start/end dates
+- Built upgrade modal — when upgrading to a paid plan, users pick duration (1/3/6/12 months) with price summary before confirming
+- Built renewal modal — expired subscriptions can be renewed with new duration selection
+- Added `POST /api/subscriptions/renew/` endpoint for subscription renewal
+- Updated `GET /api/subscriptions/my-subscription/` to return full subscription details with auto-refreshed status
+- Subscription plans table created in database (`subscription_plans`, `subscriptions` tables)
+- Landing page fixes: "Get Started Free" CTA button now links to signup page, removed non-functional "View Documentation" button
+- Removed non-functional notification bell button from admin layout header
 
 ## Design
 

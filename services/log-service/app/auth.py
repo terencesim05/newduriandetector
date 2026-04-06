@@ -22,6 +22,7 @@ class CurrentUser:
     user_name: str = ""
     is_team_leader: bool = False
     is_admin: bool = False
+    subscription_status: str = "active"
 
 
 async def get_current_user(
@@ -64,6 +65,7 @@ async def get_current_user(
             user_name=payload.get("user_name", ""),
             is_team_leader=payload.get("is_team_leader", False),
             is_admin=payload.get("is_superuser", False),
+            subscription_status=payload.get("subscription_status", "active"),
         )
     except (JWTError, ValueError) as exc:
         raise HTTPException(
@@ -76,4 +78,16 @@ def require_admin(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
     """Dependency that enforces admin access."""
     if not user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required.")
+    return user
+
+
+def require_active_subscription(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    """Dependency that blocks users with expired/pending subscriptions (Free tier exempt)."""
+    if user.tier == "FREE" or user.is_admin:
+        return user
+    if user.subscription_status not in ("active",):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Your subscription is {user.subscription_status}. Please renew to continue using this feature.",
+        )
     return user

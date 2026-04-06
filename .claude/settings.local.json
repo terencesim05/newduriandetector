@@ -29,7 +29,12 @@
       "WebSearch",
       "WebFetch(domain:threatfox-api.abuse.ch)",
       "WebFetch(domain:threatfox.abuse.ch)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(find . -name \"*.jsx\" -type f -exec grep -l \"^[^/]*<button[^>]*>[^<]*</button>\" {} \\\\;)",
+      "Bash(grep -n '<button' layouts/AdminLayout.jsx pages/admin/*.jsx)",
+      "Bash(ls -la pages/*.jsx pages/admin/*.jsx)",
+      "Bash(/c/Users/Terence01/AppData/Local/Python/bin/python3.exe manage.py makemigrations subscriptions)",
+      "Bash(/c/Users/Terence01/AppData/Local/Python/bin/python3.exe:*)"
     ]
   }
 }

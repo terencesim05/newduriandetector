@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.auth import get_current_user, CurrentUser
+from app.auth import get_current_user, require_active_subscription, CurrentUser
 from app.models.alert import Alert, QuarantineStatus
 from app.models.lists import BlacklistEntry, WhitelistEntry
 from app.schemas.alert import IngestRequest, IngestResponse, AlertIngest
@@ -46,7 +46,7 @@ def _check_list(ip: str, entries) -> object | None:
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest_alerts(
     body: IngestRequest,
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     normalised: list[AlertIngest] = []

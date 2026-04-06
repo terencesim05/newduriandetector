@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AdminSidebar from '../components/AdminSidebar';
-import { Menu, Search, Bell } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 
 const pageTitles = {
   '/admin/dashboard': 'Dashboard',
@@ -68,10 +68,6 @@ export default function AdminLayout({ children }) {
                 className="bg-transparent text-sm text-white placeholder-slate-600 outline-none w-full"
               />
             </div>
-            <button className="relative text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/[0.05] cursor-pointer">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
           </div>
         </header>
 

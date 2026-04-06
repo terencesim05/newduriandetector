@@ -73,8 +73,20 @@ export const authService = {
     return response.data;
   },
 
-  async changeTier(tier) {
-    const response = await authApi.post('/api/subscriptions/upgrade/', { tier });
+  async changeTier(tier, durationMonths) {
+    const payload = { tier };
+    if (durationMonths) payload.duration_months = durationMonths;
+    const response = await authApi.post('/api/subscriptions/upgrade/', payload);
+    return response.data;
+  },
+
+  async getMySubscription() {
+    const response = await authApi.get('/api/subscriptions/my-subscription/');
+    return response.data;
+  },
+
+  async renewSubscription(durationMonths) {
+    const response = await authApi.post('/api/subscriptions/renew/', { duration_months: durationMonths });
     return response.data;
   },
 };
