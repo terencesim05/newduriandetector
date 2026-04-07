@@ -1,6 +1,11 @@
 import random
 import string
 
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -142,6 +147,87 @@ class AuthViewSet(viewsets.GenericViewSet):
         request.user.save()
         _log_action(request, request.user, 'password_changed', 'User changed their password')
         return Response({'detail': 'Password changed successfully.'})
+
+    @action(detail=False, methods=['post'], url_path='password-reset/request', permission_classes=[AllowAny])
+    def password_reset_request(self, request):
+        email = (request.data.get('email') or '').strip().lower()
+        if not email:
+            return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Always respond 200 to avoid leaking which emails exist
+        generic_response = Response(
+            {'detail': 'If an account with that email exists, a reset link has been sent.'}
+        )
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return generic_response
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?uid={uid}&token={token}"
+
+        subject = 'Reset your DurianDetector password'
+        body = (
+            f"Hi {user.first_name or user.username},\n\n"
+            f"We received a request to reset your DurianDetector password. "
+            f"Click the link below to set a new password. This link will expire in 3 days.\n\n"
+            f"{reset_link}\n\n"
+            f"If you didn't request this, you can safely ignore this email.\n"
+        )
+
+        try:
+            send_mail(
+                subject,
+                body,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+            _log_action(request, user, 'password_reset_requested', 'Password reset email sent')
+        except Exception as e:
+            return Response(
+                {'detail': f'Failed to send reset email: {e}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return generic_response
+
+    @action(detail=False, methods=['post'], url_path='password-reset/confirm', permission_classes=[AllowAny])
+    def password_reset_confirm(self, request):
+        uid = request.data.get('uid')
+        token = request.data.get('token')
+        new_password = request.data.get('new_password')
+
+        if not uid or not token or not new_password:
+            return Response(
+                {'detail': 'uid, token, and new_password are required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(new_password) < 8:
+            return Response(
+                {'detail': 'New password must be at least 8 characters.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user_pk = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=user_pk)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response({'detail': 'Invalid reset link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, token):
+            return Response(
+                {'detail': 'Reset link is invalid or has expired.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save()
+        _log_action(request, user, 'password_reset_completed', 'Password reset via email link')
+        return Response({'detail': 'Password has been reset successfully.'})
 
     @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
     def me(self, request):

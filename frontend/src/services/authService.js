@@ -60,6 +60,20 @@ export const authService = {
     return response.data;
   },
 
+  async requestPasswordReset(email) {
+    const response = await authApi.post('/api/auth/password-reset/request/', { email });
+    return response.data;
+  },
+
+  async confirmPasswordReset(uid, token, newPassword) {
+    const response = await authApi.post('/api/auth/password-reset/confirm/', {
+      uid,
+      token,
+      new_password: newPassword,
+    });
+    return response.data;
+  },
+
   async changePassword(currentPassword, newPassword) {
     const response = await authApi.post('/api/auth/change-password/', {
       current_password: currentPassword,

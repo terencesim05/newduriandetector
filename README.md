@@ -434,6 +434,8 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | POST | `/register/` | Register new user (handles tier + team logic) |
 | POST | `/login/` | Login with email/password, returns JWT tokens |
 | POST | `/logout/` | Blacklist refresh token |
+| POST | `/password-reset/request/` | Request password reset email (body: `{email}`) |
+| POST | `/password-reset/confirm/` | Confirm reset with token (body: `{uid, token, new_password}`) |
 | GET | `/me/` | Get current user profile |
 | PATCH | `/me/` | Update user profile |
 
@@ -626,6 +628,11 @@ Root `.env` (shared by both services):
 - `DATABASE_URL` — PostgreSQL connection string (Supabase)
 - `JWT_SECRET_KEY` — shared JWT signing key
 - `THREATFOX_AUTH_KEY` — free API key from https://auth.abuse.ch/
+- `EMAIL_BACKEND` — `django.core.mail.backends.smtp.EmailBackend` (prod) or `console.EmailBackend` (dev)
+- `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USE_TLS` — SMTP server config (Resend: `smtp.resend.com`, `587`, `True`)
+- `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` — SMTP credentials (Resend: user `resend`, password = API key)
+- `DEFAULT_FROM_EMAIL` — sender address (must be on a verified Resend domain in production)
+- `FRONTEND_URL` — base URL used to build password reset links (default `http://localhost:5173`)
 
 Frontend `frontend/.env`:
 - `VITE_AUTH_API_URL` — Auth service URL (default: `http://localhost:8000`)
@@ -909,6 +916,15 @@ Each config uses a different API key, so alerts are routed to the correct client
 - ThreatFox first_seen field fix — was mapping `first_seen_utc` but API returns `first_seen`
 - Added 5-minute server-side cache on ThreatFox recent IOCs endpoint with stale fallback
 - Analytics PDF export — all 4 charts in a single landscape A4 PDF with title and timestamp (jsPDF)
+
+### April 7 — Password Reset via Email
+- Wired Django email via Resend SMTP (`smtp.resend.com:587`, STARTTLS) — config read from root `.env` (`EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL`, `FRONTEND_URL`)
+- Added `POST /api/auth/password-reset/request/` — accepts `{email}`, generates uid + token via Django's `default_token_generator`, sends reset link `${FRONTEND_URL}/reset-password?uid=...&token=...` via `send_mail`. Always returns 200 to prevent email enumeration. Logs `password_reset_requested` to AuditLog
+- Added `POST /api/auth/password-reset/confirm/` — accepts `{uid, token, new_password}`, decodes uid, validates token (3-day expiry from `PASSWORD_RESET_TIMEOUT`), enforces 8+ char min, calls `set_password()`. Logs `password_reset_completed`
+- Frontend: new `ForgotPassword.jsx` (email entry form) and `ResetPassword.jsx` (reads `?uid=&token=` from URL, new password + confirm fields, redirects to login on success). Routes `/forgot-password` and `/reset-password` registered in `main.jsx`
+- Added "Forgot password?" link next to the password label on the Login page
+- `authService.requestPasswordReset(email)` and `authService.confirmPasswordReset(uid, token, newPassword)` helpers
+- Note: Resend sandbox sender `onboarding@resend.dev` only delivers to the email registered on the Resend account — verify a domain in the Resend dashboard before sending to real users
 
 ### April 6 — Subscription Lifecycle, Landing Page Fixes
 - Built subscription lifecycle with duration-based plans — users select 1, 3, 6, or 12-month subscription durations when upgrading to Premium or Exclusive
