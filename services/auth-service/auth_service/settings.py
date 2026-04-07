@@ -6,22 +6,28 @@ from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
-from decouple import Config, RepositoryEnv
+from decouple import Config, RepositoryEnv, AutoConfig
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Read .env from project root (../../.env relative to auth-service/)
+# Prefer .env file for local dev; fall back to real OS env vars in production.
 ENV_PATH = BASE_DIR.parent.parent / '.env'
-config = Config(RepositoryEnv(str(ENV_PATH)))
+try:
+    if ENV_PATH.is_file():
+        config = Config(RepositoryEnv(str(ENV_PATH)))
+    else:
+        raise FileNotFoundError
+except (FileNotFoundError, OSError):
+    config = AutoConfig(search_path=str(BASE_DIR))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('JWT_SECRET_KEY', default='django-insecure-change-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', cast=bool, default=True)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [h.strip() for h in config('ALLOWED_HOSTS', default='*').split(',')]
 
 
 # Application definition
@@ -46,6 +52,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -99,6 +106,8 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -125,10 +134,16 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS
+# CORS — comma-separated list in env
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
+    o.strip() for o in config(
+        'CORS_ALLOWED_ORIGINS',
+        default='http://localhost:5173',
+    ).split(',') if o.strip()
 ]
+
+# Django requires CSRF trusted origins for non-localhost cross-origin POSTs (admin, etc.)
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
 # Email
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
