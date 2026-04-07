@@ -38,7 +38,11 @@
       "Bash(curl:*)",
       "Bash(find:*)",
       "Bash(grep -r \"NotImplemented\\\\|pass\\\\s*$\\\\|TODO\\\\|FIXME\" /c/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/app/routes/*.py)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
