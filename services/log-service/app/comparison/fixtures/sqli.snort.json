@@ -1,0 +1,5 @@
+[
+  {"engine": "snort", "timestamp": "2024-04-07T11:05:02Z", "src_ip": "203.0.113.42", "dst_ip": "10.0.0.20", "src_port": 44210, "dst_port": 80, "protocol": "tcp", "signature_id": "1:19438", "signature": "SQL union select - possible sql injection attempt", "category": "Web Application Attack", "severity": "high"},
+  {"engine": "snort", "timestamp": "2024-04-07T11:05:03Z", "src_ip": "203.0.113.42", "dst_ip": "10.0.0.20", "src_port": 44211, "dst_port": 80, "protocol": "tcp", "signature_id": "1:13990", "signature": "SQL generic sql with comments injection attempt - GET parameter", "category": "Web Application Attack", "severity": "high"},
+  {"engine": "snort", "timestamp": "2024-04-07T11:05:04Z", "src_ip": "203.0.113.42", "dst_ip": "10.0.0.20", "src_port": 44212, "dst_port": 80, "protocol": "tcp", "signature_id": "1:19439", "signature": "SQL 1 = 1 - possible sql injection attempt", "category": "Web Application Attack", "severity": "high"}
+]

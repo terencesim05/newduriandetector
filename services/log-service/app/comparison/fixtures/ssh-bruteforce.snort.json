@@ -1,0 +1,5 @@
+[
+  {"engine": "snort", "timestamp": "2024-04-07T12:14:01Z", "src_ip": "198.51.100.77", "dst_ip": "10.0.0.8", "src_port": 38211, "dst_port": 22, "protocol": "tcp", "signature_id": "1:19559", "signature": "INDICATOR-SCAN SSH brute force login attempt", "category": "Misc activity", "severity": "medium"},
+  {"engine": "snort", "timestamp": "2024-04-07T12:14:03Z", "src_ip": "198.51.100.77", "dst_ip": "10.0.0.8", "src_port": 38212, "dst_port": 22, "protocol": "tcp", "signature_id": "1:19559", "signature": "INDICATOR-SCAN SSH brute force login attempt", "category": "Misc activity", "severity": "medium"},
+  {"engine": "snort", "timestamp": "2024-04-07T12:14:05Z", "src_ip": "198.51.100.77", "dst_ip": "10.0.0.8", "src_port": 38213, "dst_port": 22, "protocol": "tcp", "signature_id": "1:19559", "signature": "INDICATOR-SCAN SSH brute force login attempt", "category": "Misc activity", "severity": "medium"}
+]
