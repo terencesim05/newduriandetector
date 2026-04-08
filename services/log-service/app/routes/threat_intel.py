@@ -1,6 +1,23 @@
 import logging
 import time
+from datetime import datetime, timezone, timedelta
 import httpx
+
+SGT = timezone(timedelta(hours=8))
+
+
+def _to_sgt(value: str | None) -> str | None:
+    """ThreatFox returns timestamps as 'YYYY-MM-DD HH:MM:SS UTC'. Convert to GMT+8."""
+    if not value:
+        return value
+    s = value.replace(" UTC", "").strip()
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            dt = datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
+            return dt.astimezone(SGT).strftime("%Y-%m-%d %H:%M:%S SGT")
+        except ValueError:
+            continue
+    return value
 from fastapi import APIRouter, Depends, Query
 from app.auth import get_current_user, CurrentUser
 from app.config import settings
@@ -75,8 +92,8 @@ async def get_recent_iocs(
             "threat_type": ioc.get("threat_type"),
             "malware": ioc.get("malware_printable"),
             "confidence_level": ioc.get("confidence_level", 0),
-            "first_seen": ioc.get("first_seen") or ioc.get("first_seen_utc"),
-            "last_seen": ioc.get("last_seen") or ioc.get("last_seen_utc"),
+            "first_seen": _to_sgt(ioc.get("first_seen") or ioc.get("first_seen_utc")),
+            "last_seen": _to_sgt(ioc.get("last_seen") or ioc.get("last_seen_utc")),
             "reference": ioc.get("reference"),
             "reporter": ioc.get("reporter"),
             "tags": ioc.get("tags") or [],
@@ -123,8 +140,8 @@ async def search_ioc(
             "threat_type": ioc.get("threat_type"),
             "malware": ioc.get("malware_printable"),
             "confidence_level": ioc.get("confidence_level", 0),
-            "first_seen": ioc.get("first_seen") or ioc.get("first_seen_utc"),
-            "last_seen": ioc.get("last_seen") or ioc.get("last_seen_utc"),
+            "first_seen": _to_sgt(ioc.get("first_seen") or ioc.get("first_seen_utc")),
+            "last_seen": _to_sgt(ioc.get("last_seen") or ioc.get("last_seen_utc")),
             "reference": ioc.get("reference"),
             "reporter": ioc.get("reporter"),
             "tags": ioc.get("tags") or [],
