@@ -4,8 +4,9 @@ from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
 # Load .env from project root if present (local dev). In production, real env vars are used.
-root_env = Path(__file__).resolve().parents[3] / ".env"
-if root_env.exists():
+parents = Path(__file__).resolve().parents
+root_env = parents[3] / ".env" if len(parents) > 3 else None
+if root_env and root_env.exists():
     load_dotenv(root_env)
 
 
