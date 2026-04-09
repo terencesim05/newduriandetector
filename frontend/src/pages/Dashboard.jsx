@@ -6,6 +6,8 @@ import { useAlertNotifications } from '../hooks/useAlertNotifications.jsx';
 import LiveAlertFeed from '../components/LiveAlertFeed';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
+import { API_CONFIG } from '../config/api';
 import {
   Bell,
   AlertTriangle,
@@ -14,6 +16,8 @@ import {
   ArrowRight,
   UserCheck,
   Bot,
+  Radio,
+  X,
 } from 'lucide-react';
 
 const severityColors = {
@@ -33,11 +37,33 @@ const colorMap = {
 export default function Dashboard() {
   const { user } = useAuth();
   const isExclusive = user?.tier?.toUpperCase() === 'EXCLUSIVE';
+  const isExclusiveMember = isExclusive && !user?.is_team_leader;
   const [myAlerts, setMyAlerts] = useState([]);
+  const [watcherDismissed, setWatcherDismissed] = useState(() => localStorage.getItem('watcher_nudge_dismissed') === 'true');
+  const [hasApiKeys, setHasApiKeys] = useState(null);
   const { alerts: liveAlerts, stats: liveStats, connected, error, reconnect, dismissAlert, dismissAllAlerts } = useSSE();
 
   // Notifications for new alerts
   useAlertNotifications(liveAlerts);
+
+  // Check if user has any active API keys (watcher connected indicator)
+  useEffect(() => {
+    if (isExclusiveMember || watcherDismissed) return;
+    const logApi = axios.create({ baseURL: API_CONFIG.LOG_BASE_URL });
+    const token = localStorage.getItem('accessToken');
+    if (token) logApi.defaults.headers.Authorization = `Bearer ${token}`;
+    logApi.get('/api/api-keys').then((res) => {
+      const active = (res.data || []).filter((k) => k.is_active);
+      setHasApiKeys(active.length > 0);
+    }).catch(() => setHasApiKeys(false));
+  }, [isExclusiveMember, watcherDismissed]);
+
+  const showWatcherNudge = !isExclusiveMember && !watcherDismissed && hasApiKeys === false;
+
+  const dismissWatcherNudge = () => {
+    setWatcherDismissed(true);
+    localStorage.setItem('watcher_nudge_dismissed', 'true');
+  };
 
   useEffect(() => {
     if (isExclusive) {
@@ -68,6 +94,35 @@ export default function Dashboard() {
         </div>
         <ConnectionStatus connected={connected} error={error} onReconnect={reconnect} />
       </div>
+
+      {/* IDS Watcher nudge */}
+      {showWatcherNudge && (
+        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+            <Radio className="w-[18px] h-[18px] text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold text-amber-300">No IDS watcher connected</h3>
+            <p className="text-xs text-amber-200/60 mt-0.5">
+              Set up a watcher to start receiving real-time alerts from your IDS engines (Suricata, Snort, Zeek, Kismet).
+            </p>
+            <Link
+              to="/settings"
+              state={{ tab: 'ids-setup' }}
+              className="inline-flex items-center gap-1 text-xs font-medium text-amber-400 hover:text-amber-300 mt-2 transition-colors"
+            >
+              Set up IDS Watcher <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <button
+            onClick={dismissWatcherNudge}
+            className="text-amber-500/40 hover:text-amber-400 transition-colors cursor-pointer shrink-0"
+            title="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

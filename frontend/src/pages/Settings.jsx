@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 import { User, Shield, CreditCard, Key, Check, Loader2, Eye, EyeOff, Copy, Trash2, Calendar, RefreshCw, Radio, Terminal, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
@@ -523,7 +524,8 @@ function APIKeysTab({ inputClass }) {
 
 export default function Settings() {
   const { user, refreshUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('profile');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'profile');
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [email] = useState(user?.email || '');

@@ -208,6 +208,7 @@ Investigation reports that group related alerts together. Alerts are automated s
 - **Profile**: Edit first name, last name (email read-only), save button persists to backend via `PATCH /api/auth/me/`
 - **Account**: Side-by-side plan comparison (Free/Premium/Exclusive) with feature lists, pricing, and upgrade/downgrade buttons — current plan highlighted
 - **API Keys**: Generate keys for IDS watcher, full key shown once with copy button, table of existing keys with label/preview/last used/status, revoke button
+- **IDS Watcher**: Setup guide with quick start commands, collapsible installation guides for Suricata/Snort/Zeek/Kismet with copy-to-clipboard CLI commands, configuration snippets, log paths, and troubleshooting tips
 - **Security**: Change password with current password verification
 
 ### Admin Panel (Superuser Only)
@@ -260,9 +261,9 @@ The **IDS Watcher** service (`services/ids-watcher/`) tails live IDS log files a
 | **Kismet** | REST API polling | Polls `/alerts/last-time/` endpoint for new wireless alerts |
 
 **How it works:**
-1. Generate an API key from Settings or via `POST /api/api-keys` with label `"ids-watcher"`
-2. Configure `config.yaml` — paste the API key, enable your IDS engines, set file paths
-3. Run `python watcher.py` — starts async file tailers for each enabled IDS
+1. Generate an API key from Settings → API Keys
+2. Run `python watcher.py setup` — interactive wizard that configures API connection, auto-detects IDS log paths, and generates `config.yaml`
+3. Run `python watcher.py` — starts async file tailers for each enabled IDS (multiple engines run concurrently)
 4. New log lines are parsed, batched (configurable size/interval), and POSTed to `POST /api/logs/ingest`
 5. Alerts appear in the dashboard live feed within seconds via SSE
 
@@ -529,6 +530,11 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | POST | `/api/incidents/{id}/link-alert` | Link an alert to an incident |
 | DELETE | `/api/incidents/{id}/unlink-alert/{alert_id}` | Unlink an alert from an incident |
 | GET | `/api/incidents/{id}/alerts` | List alerts linked to an incident |
+| GET | `/api/comparison/stats` | Per-engine alert counts (Exclusive only) |
+| POST | `/api/comparison/runs` | Run three-way comparison on real alerts (Exclusive only) |
+| GET | `/api/comparison/runs` | List past comparison runs |
+| GET | `/api/comparison/runs/{id}` | Get comparison run details with matched pairs |
+| DELETE | `/api/comparison/runs/{id}` | Delete a comparison run |
 
 ## Data Models
 
@@ -969,6 +975,37 @@ Each config uses a different API key, so alerts are routed to the correct client
 - trust_ip: adds to whitelist, removes from blacklist if present
 - create_incident: creates incident with title, description, priority
 - Action badge on chat messages — green "Action: Blocked IP" tag when a destructive action was taken
+
+### April 9 — Three-Way IDS Comparison, Watcher Setup Wizard, IDS Setup Guide
+- Rewrote IDS engine comparison to support **three-way correlation** (Snort vs Suricata vs Zeek) using real ingested alerts instead of pre-compiled sample data
+- Removed pre-compiled fixtures and samples registry — comparison now queries live alerts from the database within a user-selected time range (1h to 30d)
+- 7 agreement categories: `all_three`, `snort+suricata`, `snort+zeek`, `suricata+zeek`, `snort_only`, `suricata_only`, `zeek_only`
+- New `/api/comparison/stats` endpoint showing per-engine alert counts
+- Requires at least 2 engines with data to run a comparison
+- Updated `ComparisonRun` model with `zeek_count`, all combination counts, `start_date`/`end_date` fields
+- Frontend: replaced sample picker with time range selector, added Zeek column to results table, engine stats overview, 7 colour-coded agreement badges
+- Built **interactive CLI setup wizard** for IDS watcher (`python watcher.py setup`)
+  - Prompts for API URL and key with connection test
+  - Multi-IDS selection (comma-separated) — all run concurrently
+  - Auto-detects common log paths for Suricata, Snort, Zeek
+  - Validates file paths exist, warns if not found
+  - Kismet prompts for REST API URL separately
+  - Configurable batch settings
+  - Generates ready-to-use `config.yaml`
+- Added **IDS Watcher Setup tab** to Settings page with:
+  - Quick start commands (clone, install, setup wizard)
+  - Collapsible installation guides for all 4 IDS engines (Suricata, Snort 3, Zeek, Kismet) with copy-to-clipboard CLI commands
+  - Configuration snippets (EVE JSON, alert_json, node.cfg, REST API)
+  - Log path reference per engine
+  - Troubleshooting section
+- Created comprehensive **IDS Setup Guide** (`services/ids-watcher/IDS_SETUP_GUIDE.md`) with full CLI commands for installing, configuring, and running all 4 IDS engines on Ubuntu/Debian and CentOS/Fedora
+- Added **IDS watcher connection nudge** on Dashboard — amber banner shown to users with no active API keys
+  - Visible to: Free users, Premium users, Exclusive team leaders
+  - Hidden from: Exclusive team members (leader handles watcher setup)
+  - Links directly to Settings → IDS Watcher tab
+  - Dismissible with localStorage persistence
+  - Auto-disappears once an API key is created
+- Removed auth-service Dockerfile (was using dev server `manage.py runserver`, not needed for Railway/Render deployment)
 
 ## Design
 
