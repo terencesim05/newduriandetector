@@ -345,7 +345,8 @@ def run_setup(output_path: str = "config.yaml"):
 
     # ── API connection ──
     print("  -- API Connection --")
-    api_url = _prompt("API URL", "http://localhost:8001")
+    api_url = "https://log-service-production-f5f2.up.railway.app"
+    print(f"  API URL: {api_url}")
     api_key = _prompt("API Key (from Settings > API Keys)")
 
     if _test_connection(api_url, api_key):
@@ -468,7 +469,7 @@ async def main(config_path: str):
     api_cfg = cfg.get("api", {})
     batch_cfg = cfg.get("batch", {})
     client = APIClient(
-        base_url=api_cfg.get("url", "http://localhost:8001"),
+        base_url=api_cfg.get("url", "https://log-service-production-f5f2.up.railway.app"),
         api_key=api_cfg.get("api_key", ""),
         token=api_cfg.get("token", ""),
         batch_size=batch_cfg.get("size", 50),

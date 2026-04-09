@@ -2,7 +2,7 @@
 # Copy this file to config.local.yaml and adjust paths for your environment.
 
 api:
-  url: "http://localhost:8001"
+  url: "https://log-service-production-f5f2.up.railway.app"
 
   # Authentication — use ONE of the following:
 
