@@ -144,16 +144,23 @@ function IDSSetupTab() {
     {
       id: 'snort',
       name: 'Snort 3',
-      description: 'Signature-based IDS with JSON alert output',
+      description: 'Signature-based IDS with JSON alert output (built from source)',
       color: 'text-red-400',
       borderColor: 'border-red-500/20',
       steps: [
         {
-          title: 'Install',
+          title: 'Install dependencies',
           commands: [
-            { label: 'Ubuntu PPA (if available)', cmd: 'sudo add-apt-repository ppa:snort/snort3 && sudo apt update && sudo apt install -y snort3' },
+            { label: 'Kali / Debian', cmd: 'sudo apt update && sudo apt install -y build-essential libpcap-dev libpcre3-dev libnet1-dev zlib1g-dev luajit hwloc libdnet-dev libdumbnet-dev bison flex liblzma-dev openssl libssl-dev pkg-config libhwloc-dev cmake libsqlite3-dev uuid-dev libcmocka-dev libnetfilter-queue-dev libmnl-dev libluajit-5.1-dev libunwind-dev libfl-dev autotools-dev git' },
           ],
-          description: 'Or build from source — see the full guide in the IDS Watcher repo.',
+        },
+        {
+          title: 'Build from source',
+          commands: [
+            { label: 'Build DAQ', cmd: 'git clone https://github.com/snort3/libdaq.git && cd libdaq && ./bootstrap && ./configure && make && sudo make install && cd ..' },
+            { label: 'Build Snort 3', cmd: 'git clone https://github.com/snort3/snort3.git && cd snort3 && ./configure_cmake.sh --prefix=/usr/local && cd build && make -j$(nproc) && sudo make install && cd ../.. && sudo ldconfig' },
+            { label: 'Verify', cmd: 'snort -V' },
+          ],
         },
         {
           title: 'Configure JSON output',
@@ -168,7 +175,7 @@ function IDSSetupTab() {
         {
           title: 'Download rules',
           commands: [
-            { label: 'Community rules', cmd: 'wget https://www.snort.org/downloads/community/snort3-community-rules.tar.gz && tar -xzf snort3-community-rules.tar.gz && sudo cp snort3-community-rules/snort3-community.rules /usr/local/etc/snort/rules/' },
+            { label: 'Community rules', cmd: 'sudo mkdir -p /usr/local/etc/snort/rules && wget https://www.snort.org/downloads/community/snort3-community-rules.tar.gz && tar -xzf snort3-community-rules.tar.gz && sudo cp snort3-community-rules/snort3-community.rules /usr/local/etc/snort/rules/' },
           ],
         },
         {

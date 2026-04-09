@@ -115,7 +115,9 @@ Log file: `/var/log/suricata/eve.json`
 
 ## Snort 3
 
-### Ubuntu / Debian
+### Install on Kali Linux / Debian
+
+Snort 3 must be built from source on Kali — there is no PPA or apt package.
 
 ```bash
 # Install dependencies
@@ -123,11 +125,14 @@ sudo apt update
 sudo apt install -y build-essential libpcap-dev libpcre3-dev \
   libnet1-dev zlib1g-dev luajit hwloc libdnet-dev \
   libdumbnet-dev bison flex liblzma-dev openssl libssl-dev \
-  pkg-config libhwloc-dev cmake cpputest libsqlite3-dev \
+  pkg-config libhwloc-dev cmake libsqlite3-dev \
   uuid-dev libcmocka-dev libnetfilter-queue-dev libmnl-dev \
-  autotools-dev libluajit-5.1-dev libunwind-dev libfl-dev
+  libluajit-5.1-dev libunwind-dev libfl-dev autotools-dev git
+```
 
-# Install DAQ (Data Acquisition library)
+### Build and install DAQ (Data Acquisition library)
+
+```bash
 git clone https://github.com/snort3/libdaq.git
 cd libdaq
 ./bootstrap
@@ -135,8 +140,11 @@ cd libdaq
 make
 sudo make install
 cd ..
+```
 
-# Install Snort 3
+### Build and install Snort 3
+
+```bash
 git clone https://github.com/snort3/snort3.git
 cd snort3
 ./configure_cmake.sh --prefix=/usr/local
@@ -152,18 +160,7 @@ sudo ldconfig
 snort -V
 ```
 
-### Quick install (Ubuntu PPA - if available)
-
-```bash
-# Check if Snort 3 PPA is available for your Ubuntu version
-sudo add-apt-repository ppa:snort/snort3
-sudo apt update
-sudo apt install -y snort3
-```
-
 ### Configure JSON alert output
-
-Create or edit the Snort configuration:
 
 ```bash
 sudo mkdir -p /usr/local/etc/snort
@@ -190,15 +187,13 @@ EXTERNAL_NET = '!$HOME_NET'
 ### Download rules
 
 ```bash
-# Create rules directory
 sudo mkdir -p /usr/local/etc/snort/rules
 
-# Download community rules
 wget https://www.snort.org/downloads/community/snort3-community-rules.tar.gz
 tar -xzf snort3-community-rules.tar.gz
 sudo cp snort3-community-rules/snort3-community.rules /usr/local/etc/snort/rules/
 
-# Add to snort.lua
+# Add to snort.lua:
 # ips = { include = '/usr/local/etc/snort/rules/snort3-community.rules' }
 ```
 
@@ -208,7 +203,7 @@ sudo cp snort3-community-rules/snort3-community.rules /usr/local/etc/snort/rules
 # Find your interface
 ip -br link show
 
-# Run Snort on interface eth0
+# Run Snort on interface (replace eth0 with your interface)
 sudo snort -c /usr/local/etc/snort/snort.lua -i eth0 -l /var/log/snort -A json
 
 # Run as daemon
