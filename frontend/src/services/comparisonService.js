@@ -15,13 +15,13 @@ logApi.interceptors.request.use((config) => {
 })
 
 export const comparisonService = {
-  async listSamples() {
-    const res = await logApi.get('/api/comparison/samples')
+  async getEngineStats() {
+    const res = await logApi.get('/api/comparison/stats')
     return res.data
   },
 
-  async runComparison(sampleName) {
-    const res = await logApi.post('/api/comparison/runs', { sample: sampleName })
+  async runComparison(hours = 24) {
+    const res = await logApi.post('/api/comparison/runs', { hours })
     return res.data
   },
 

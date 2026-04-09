@@ -1,6 +1,0 @@
-[
-  {"engine": "suricata", "timestamp": "2024-04-07T11:05:02Z", "src_ip": "203.0.113.42", "dst_ip": "10.0.0.20", "src_port": 44210, "dst_port": 80, "protocol": "tcp", "signature_id": "2006446", "signature": "ET WEB_SERVER Possible SQL Injection Attempt UNION SELECT", "category": "Web Application Attack", "severity": "critical"},
-  {"engine": "suricata", "timestamp": "2024-04-07T11:05:03Z", "src_ip": "203.0.113.42", "dst_ip": "10.0.0.20", "src_port": 44211, "dst_port": 80, "protocol": "tcp", "signature_id": "2006380", "signature": "ET WEB_SERVER Possible SQL Injection (varchar)", "category": "Web Application Attack", "severity": "critical"},
-  {"engine": "suricata", "timestamp": "2024-04-07T11:05:04Z", "src_ip": "203.0.113.42", "dst_ip": "10.0.0.20", "src_port": 44212, "dst_port": 80, "protocol": "tcp", "signature_id": "2008983", "signature": "ET WEB_SERVER SELECT USER SQL Injection Attempt in URI", "category": "Web Application Attack", "severity": "critical"},
-  {"engine": "suricata", "timestamp": "2024-04-07T11:05:05Z", "src_ip": "203.0.113.42", "dst_ip": "10.0.0.20", "src_port": 44213, "dst_port": 80, "protocol": "tcp", "signature_id": "2017835", "signature": "ET WEB_SERVER SQL Injection Attempt sleep() Function", "category": "Web Application Attack", "severity": "critical"}
-]

@@ -11,13 +11,25 @@ class ComparisonRun(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(BigInteger, nullable=False)
     team_id = Column(UUID(as_uuid=True), nullable=True)
-    sample_name = Column(String(100), nullable=False)
-    sample_label = Column(String(255), nullable=False)
+
+    # Time range that was compared
+    start_date = Column(DateTime(timezone=True), nullable=True)
+    end_date = Column(DateTime(timezone=True), nullable=True)
+
+    # Per-engine alert counts
     snort_count = Column(Integer, default=0)
     suricata_count = Column(Integer, default=0)
-    agreement_count = Column(Integer, default=0)
+    zeek_count = Column(Integer, default=0)
+
+    # Agreement breakdown
+    all_three_count = Column(Integer, default=0)
+    snort_suricata_count = Column(Integer, default=0)
+    snort_zeek_count = Column(Integer, default=0)
+    suricata_zeek_count = Column(Integer, default=0)
     snort_only_count = Column(Integer, default=0)
     suricata_only_count = Column(Integer, default=0)
+    zeek_only_count = Column(Integer, default=0)
+
     severity_disagreement_count = Column(Integer, default=0)
     matched_pairs = Column(JSONB, default=list)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
