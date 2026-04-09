@@ -284,7 +284,7 @@ interface=eth0`,
               </button>
             </div>
             <code className="text-xs text-emerald-400 font-mono leading-relaxed block">
-              git clone &lt;repo&gt; && cd services/ids-watcher<br/>
+              git clone https://github.com/terencesim05/newduriandetector.git && cd services/ids-watcher<br/>
               pip install -r requirements.txt<br/>
               python watcher.py setup<br/>
               python watcher.py
