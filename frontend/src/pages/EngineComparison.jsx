@@ -49,7 +49,8 @@ const TIME_RANGES = [
 
 export default function EngineComparison() {
   const { user } = useAuth()
-  const isExclusive = (user?.tier || '').toUpperCase() === 'EXCLUSIVE'
+  const tier = (user?.tier || '').toUpperCase()
+  const hasAccess = tier === 'PREMIUM' || tier === 'EXCLUSIVE'
 
   const [stats, setStats] = useState(null)
   const [history, setHistory] = useState([])
@@ -60,7 +61,7 @@ export default function EngineComparison() {
   const [showOnlyDisagreements, setShowOnlyDisagreements] = useState(false)
 
   useEffect(() => {
-    if (!isExclusive) return
+    if (!hasAccess) return
     let cancelled = false
     Promise.all([comparisonService.getEngineStats(), comparisonService.listRuns()])
       .then(([s, h]) => {
@@ -72,7 +73,7 @@ export default function EngineComparison() {
     return () => {
       cancelled = true
     }
-  }, [isExclusive])
+  }, [hasAccess])
 
   const handleRun = async () => {
     setRunning(true)
@@ -110,14 +111,14 @@ export default function EngineComparison() {
     }
   }
 
-  if (!isExclusive) {
+  if (!hasAccess) {
     return (
       <div className="p-8">
         <div className="max-w-2xl mx-auto bg-white/[0.03] border border-white/[0.06] rounded-2xl p-10 text-center">
           <GitCompare className="w-12 h-12 text-purple-400 mx-auto mb-4" />
           <h1 className="text-2xl font-semibold text-white mb-2">IDS Engine Comparison</h1>
           <p className="text-slate-400 mb-6">
-            This feature is exclusive to the Exclusive tier. Upgrade to compare how Snort,
+            This feature requires a Premium or Exclusive subscription. Upgrade to compare how Snort,
             Suricata, and Zeek detect the same threats and surface engine-specific blind spots.
           </p>
           <a

@@ -45,7 +45,7 @@ const navSections = [
       { to: '/threat-intel', label: 'Threat Intel', icon: ShieldAlert },
       { to: '/analytics', label: 'Analytics', icon: BarChart3 },
       { to: '/attack-globe', label: 'GeoIP Map', icon: Globe },
-      { to: '/engine-comparison', label: 'Engine Comparison', icon: GitCompare, exclusiveOnly: true },
+      { to: '/engine-comparison', label: 'Engine Comparison', icon: GitCompare, premiumOnly: true },
     ],
   },
   {

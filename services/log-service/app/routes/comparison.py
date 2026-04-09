@@ -22,11 +22,11 @@ from app.utils.scoping import apply_scope
 router = APIRouter(prefix="/api/comparison", tags=["comparison"])
 
 
-def require_exclusive(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
-    if user.tier != "EXCLUSIVE":
+def require_premium(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    if user.tier not in ("PREMIUM", "EXCLUSIVE"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="IDS Engine Comparison is available on the Exclusive tier only.",
+            detail="IDS Engine Comparison is available on Premium and Exclusive tiers only.",
         )
     return user
 
@@ -115,7 +115,7 @@ def _alert_to_dict(alert: Alert) -> dict:
 
 @router.get("/stats")
 async def get_engine_stats(
-    user: CurrentUser = Depends(require_exclusive),
+    user: CurrentUser = Depends(require_premium),
     db: AsyncSession = Depends(get_db),
 ):
     """Quick check of how many alerts exist per engine for the user."""
@@ -134,7 +134,7 @@ async def get_engine_stats(
 @router.post("/runs")
 async def create_run(
     body: RunRequest,
-    user: CurrentUser = Depends(require_exclusive),
+    user: CurrentUser = Depends(require_premium),
     db: AsyncSession = Depends(get_db),
 ):
     """Run a three-way comparison on real ingested alerts within the given time range."""
@@ -210,7 +210,7 @@ async def create_run(
 
 @router.get("/runs")
 async def list_runs(
-    user: CurrentUser = Depends(require_exclusive),
+    user: CurrentUser = Depends(require_premium),
     db: AsyncSession = Depends(get_db),
 ):
     q = (
@@ -246,7 +246,7 @@ async def list_runs(
 @router.get("/runs/{run_id}")
 async def get_run(
     run_id: uuid.UUID,
-    user: CurrentUser = Depends(require_exclusive),
+    user: CurrentUser = Depends(require_premium),
     db: AsyncSession = Depends(get_db),
 ):
     q = select(ComparisonRun).where(
@@ -261,7 +261,7 @@ async def get_run(
 @router.delete("/runs/{run_id}")
 async def delete_run(
     run_id: uuid.UUID,
-    user: CurrentUser = Depends(require_exclusive),
+    user: CurrentUser = Depends(require_premium),
     db: AsyncSession = Depends(get_db),
 ):
     q = delete(ComparisonRun).where(
