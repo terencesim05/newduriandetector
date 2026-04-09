@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
-import { User, Shield, CreditCard, Key, Check, Loader2, Eye, EyeOff, Copy, Trash2, Calendar, RefreshCw } from 'lucide-react';
+import { User, Shield, CreditCard, Key, Check, Loader2, Eye, EyeOff, Copy, Trash2, Calendar, RefreshCw, Radio, Terminal, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { API_CONFIG } from '../config/api';
@@ -19,6 +19,7 @@ const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'account', label: 'Account', icon: CreditCard },
   { id: 'api-keys', label: 'API Keys', icon: Key },
+  { id: 'ids-setup', label: 'IDS Watcher', icon: Radio },
   { id: 'security', label: 'Security', icon: Shield },
 ];
 
@@ -85,6 +86,311 @@ function SecurityTab({ inputClass }) {
         Change Password
       </button>
     </form>
+  );
+}
+
+function IDSSetupTab() {
+  const [expanded, setExpanded] = useState(null);
+
+  const toggle = (id) => setExpanded(expanded === id ? null : id);
+
+  const engines = [
+    {
+      id: 'suricata',
+      name: 'Suricata',
+      description: 'Multi-threaded signature-based IDS with EVE JSON logging',
+      color: 'text-orange-400',
+      borderColor: 'border-orange-500/20',
+      steps: [
+        {
+          title: 'Install',
+          commands: [
+            { label: 'Ubuntu / Debian', cmd: 'sudo apt update && sudo apt install -y suricata' },
+            { label: 'CentOS / Fedora', cmd: 'sudo dnf install -y epel-release && sudo dnf install -y suricata' },
+            { label: 'Update rules', cmd: 'sudo suricata-update' },
+          ],
+        },
+        {
+          title: 'Configure EVE JSON output',
+          description: 'Edit /etc/suricata/suricata.yaml and ensure EVE logging is enabled:',
+          config: `outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert:
+            payload: yes`,
+        },
+        {
+          title: 'Set your network interface',
+          commands: [
+            { label: 'Find interfaces', cmd: 'ip -br link show' },
+            { label: 'Start on interface', cmd: 'sudo suricata -c /etc/suricata/suricata.yaml -i eth0' },
+          ],
+        },
+        {
+          title: 'Enable as service',
+          commands: [
+            { label: 'Auto-start on boot', cmd: 'sudo systemctl enable suricata && sudo systemctl start suricata' },
+            { label: 'Check status', cmd: 'sudo systemctl status suricata' },
+            { label: 'Verify logs', cmd: 'tail -f /var/log/suricata/eve.json' },
+          ],
+        },
+      ],
+      logPath: '/var/log/suricata/eve.json',
+    },
+    {
+      id: 'snort',
+      name: 'Snort 3',
+      description: 'Signature-based IDS with JSON alert output',
+      color: 'text-red-400',
+      borderColor: 'border-red-500/20',
+      steps: [
+        {
+          title: 'Install',
+          commands: [
+            { label: 'Ubuntu PPA (if available)', cmd: 'sudo add-apt-repository ppa:snort/snort3 && sudo apt update && sudo apt install -y snort3' },
+          ],
+          description: 'Or build from source — see the full guide in the IDS Watcher repo.',
+        },
+        {
+          title: 'Configure JSON output',
+          description: 'Add alert_json to /usr/local/etc/snort/snort.lua:',
+          config: `alert_json =
+{
+    file = true,
+    limit = 100,
+    fields = "timestamp src dst sport dport proto classtype priority msg",
+}`,
+        },
+        {
+          title: 'Download rules',
+          commands: [
+            { label: 'Community rules', cmd: 'wget https://www.snort.org/downloads/community/snort3-community-rules.tar.gz && tar -xzf snort3-community-rules.tar.gz && sudo cp snort3-community-rules/snort3-community.rules /usr/local/etc/snort/rules/' },
+          ],
+        },
+        {
+          title: 'Run Snort',
+          commands: [
+            { label: 'Start with JSON output', cmd: 'sudo snort -c /usr/local/etc/snort/snort.lua -i eth0 -l /var/log/snort -A json' },
+            { label: 'Verify logs', cmd: 'tail -f /var/log/snort/alert_json.txt' },
+          ],
+        },
+      ],
+      logPath: '/var/log/snort/alert_json.txt',
+    },
+    {
+      id: 'zeek',
+      name: 'Zeek',
+      description: 'Network analysis framework with anomaly-based detection',
+      color: 'text-teal-400',
+      borderColor: 'border-teal-500/20',
+      steps: [
+        {
+          title: 'Install',
+          commands: [
+            { label: 'Ubuntu / Debian', cmd: 'sudo apt update && sudo apt install -y zeek-lts' },
+            { label: 'CentOS / Fedora', cmd: 'sudo dnf install -y zeek-lts' },
+            { label: 'Add to PATH', cmd: 'echo \'export PATH=/opt/zeek/bin:$PATH\' >> ~/.bashrc && source ~/.bashrc' },
+          ],
+        },
+        {
+          title: 'Configure interface',
+          description: 'Edit /opt/zeek/etc/node.cfg:',
+          config: `[zeek]
+type=standalone
+host=localhost
+interface=eth0`,
+        },
+        {
+          title: 'Deploy and start',
+          commands: [
+            { label: 'Deploy', cmd: 'sudo zeekctl deploy' },
+            { label: 'Check status', cmd: 'sudo zeekctl status' },
+            { label: 'Verify logs', cmd: 'tail -f /opt/zeek/logs/current/notice.log' },
+          ],
+        },
+        {
+          title: 'Auto-restart (cron)',
+          description: 'Add to crontab (sudo crontab -e):',
+          config: '*/5 * * * * /opt/zeek/bin/zeekctl cron',
+        },
+      ],
+      logPath: '/opt/zeek/logs/current/notice.log',
+    },
+    {
+      id: 'kismet',
+      name: 'Kismet',
+      description: 'Wireless network IDS — monitors Wi-Fi, Bluetooth, and RF',
+      color: 'text-violet-400',
+      borderColor: 'border-violet-500/20',
+      steps: [
+        {
+          title: 'Install',
+          commands: [
+            { label: 'Add repo + install', cmd: 'wget -O - https://www.kismetwireless.net/repos/kismet-release.gpg.key | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/kismet.gpg && echo \'deb https://www.kismetwireless.net/repos/apt/release/jammy jammy main\' | sudo tee /etc/apt/sources.list.d/kismet.list && sudo apt update && sudo apt install -y kismet' },
+            { label: 'Add user to group', cmd: 'sudo usermod -aG kismet $USER' },
+          ],
+        },
+        {
+          title: 'Enable monitor mode',
+          commands: [
+            { label: 'List wireless interfaces', cmd: 'iwconfig' },
+            { label: 'Enable monitor mode', cmd: 'sudo ip link set wlan0 down && sudo iw wlan0 set monitor control && sudo ip link set wlan0 up' },
+          ],
+        },
+        {
+          title: 'Start Kismet',
+          commands: [
+            { label: 'Start with source', cmd: 'kismet -c wlan0' },
+            { label: 'Start as daemon', cmd: 'kismet -c wlan0 --daemonize' },
+            { label: 'Verify REST API', cmd: 'curl -s http://localhost:2501/system/status.json' },
+          ],
+        },
+      ],
+      logPath: 'http://localhost:2501 (REST API)',
+    },
+  ];
+
+  const copyCmd = (cmd) => {
+    navigator.clipboard.writeText(cmd);
+    toast.success('Copied to clipboard', toastStyle);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-white">IDS Watcher Setup</h2>
+        <p className="text-sm text-slate-400 mt-1">
+          Connect your IDS engines to DurianDetector. Install an IDS, configure its output, then run the watcher.
+        </p>
+      </div>
+
+      {/* Quick start */}
+      <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-blue-400 mb-3 flex items-center gap-2">
+          <Terminal className="w-4 h-4" /> Quick Start
+        </h3>
+        <div className="space-y-2">
+          <p className="text-xs text-slate-400">1. Generate an API key in the <span className="text-blue-400">API Keys</span> tab above</p>
+          <p className="text-xs text-slate-400">2. Install the watcher and run setup:</p>
+          <div className="bg-black/30 rounded-lg p-3 mt-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-slate-600 uppercase tracking-wider">Terminal</span>
+              <button onClick={() => copyCmd('git clone https://github.com/terencesim05/newduriandetector.git && cd newduriandetector/services/ids-watcher && pip install -r requirements.txt && python watcher.py setup')} className="text-slate-600 hover:text-slate-300 transition-colors cursor-pointer">
+                <Copy className="w-3 h-3" />
+              </button>
+            </div>
+            <code className="text-xs text-emerald-400 font-mono leading-relaxed block">
+              git clone &lt;repo&gt; && cd services/ids-watcher<br/>
+              pip install -r requirements.txt<br/>
+              python watcher.py setup<br/>
+              python watcher.py
+            </code>
+          </div>
+          <p className="text-xs text-slate-400 mt-2">The setup wizard will guide you through API connection and IDS selection.</p>
+        </div>
+      </div>
+
+      {/* IDS engines */}
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+          IDS Installation Guides
+        </h3>
+        <div className="space-y-3">
+          {engines.map((engine) => (
+            <div key={engine.id} className={`bg-white/[0.02] border ${expanded === engine.id ? engine.borderColor : 'border-white/[0.06]'} rounded-xl overflow-hidden transition-all`}>
+              <button
+                onClick={() => toggle(engine.id)}
+                className="w-full px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Radio className={`w-4 h-4 ${engine.color}`} />
+                  <div className="text-left">
+                    <span className="text-sm font-semibold text-white">{engine.name}</span>
+                    <span className="text-xs text-slate-500 ml-3">{engine.description}</span>
+                  </div>
+                </div>
+                {expanded === engine.id
+                  ? <ChevronDown className="w-4 h-4 text-slate-500" />
+                  : <ChevronRight className="w-4 h-4 text-slate-500" />
+                }
+              </button>
+
+              {expanded === engine.id && (
+                <div className="px-5 pb-5 border-t border-white/[0.04]">
+                  <div className="mt-4 space-y-5">
+                    {engine.steps.map((step, idx) => (
+                      <div key={idx}>
+                        <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                          {idx + 1}. {step.title}
+                        </h4>
+                        {step.description && (
+                          <p className="text-xs text-slate-500 mb-2">{step.description}</p>
+                        )}
+                        {step.commands && (
+                          <div className="space-y-2">
+                            {step.commands.map((c, ci) => (
+                              <div key={ci}>
+                                <span className="text-[10px] text-slate-600 block mb-0.5">{c.label}</span>
+                                <div className="bg-black/30 rounded-lg px-3 py-2 flex items-start justify-between gap-2 group">
+                                  <code className="text-xs text-emerald-400 font-mono break-all">{c.cmd}</code>
+                                  <button onClick={() => copyCmd(c.cmd)} className="text-slate-600 hover:text-slate-300 transition-colors cursor-pointer shrink-0 mt-0.5 opacity-0 group-hover:opacity-100">
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {step.config && (
+                          <div className="bg-black/30 rounded-lg px-3 py-2 mt-1 group relative">
+                            <button onClick={() => copyCmd(step.config)} className="absolute top-2 right-2 text-slate-600 hover:text-slate-300 transition-colors cursor-pointer opacity-0 group-hover:opacity-100">
+                              <Copy className="w-3 h-3" />
+                            </button>
+                            <pre className="text-xs text-yellow-400/80 font-mono whitespace-pre-wrap">{step.config}</pre>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-2.5 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-600 uppercase tracking-wider block">Log path for watcher config</span>
+                      <code className="text-xs text-white font-mono">{engine.logPath}</code>
+                    </div>
+                    <button onClick={() => copyCmd(engine.logPath)} className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Troubleshooting */}
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Troubleshooting</h3>
+        <div className="space-y-3 text-xs text-slate-400">
+          <div>
+            <span className="text-slate-300 font-medium">No alerts appearing?</span>
+            <p className="mt-0.5">Check the IDS is running (<code className="text-emerald-400">sudo systemctl status suricata</code>), then verify logs are being written (<code className="text-emerald-400">tail -f /var/log/suricata/eve.json</code>).</p>
+          </div>
+          <div>
+            <span className="text-slate-300 font-medium">Permission denied on log files?</span>
+            <p className="mt-0.5">Run <code className="text-emerald-400">sudo usermod -aG suricata $USER</code> or run the watcher as root.</p>
+          </div>
+          <div>
+            <span className="text-slate-300 font-medium">Watcher can't connect?</span>
+            <p className="mt-0.5">Verify the API URL and key: <code className="text-emerald-400">curl -H "X-API-Key: YOUR_KEY" https://your-api-url/health</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -606,6 +912,8 @@ export default function Settings() {
         )}
 
         {activeTab === 'api-keys' && <APIKeysTab inputClass={inputClass} />}
+
+        {activeTab === 'ids-setup' && <IDSSetupTab />}
 
         {activeTab === 'security' && <SecurityTab inputClass={inputClass} />}
       </div>
