@@ -191,6 +191,35 @@ Investigation reports that group related alerts together. Alerts are automated s
 - **Pagination**: server-side with page controls
 - **Multi-tenant**: incidents scoped by user (FREE/PREMIUM) or team (EXCLUSIVE)
 
+### DurianBot (AI Security Assistant)
+
+AI-powered chatbot built on Google Gemini (`gemini-2.5-flash`) with function calling. DurianBot can answer questions about your security data and take actions directly from the chat.
+
+**Tier access:**
+- **Free**: 5 messages per session (DurianBot Basic)
+- **Premium / Exclusive**: Unlimited messages
+
+**Tools & Capabilities:**
+
+| Tool | Type | What it does |
+|------|------|-------------|
+| `get_stats` | Read | Query alert statistics — total alerts, counts by severity, top 5 categories, top 5 source IPs, blocked/quarantined counts |
+| `get_alerts` | Read | Query recent alerts with severity and category filters (returns up to 10) |
+| `get_blacklist` | Read | Retrieve last 20 blocked IPs with reason and who added them |
+| `get_whitelist` | Read | Retrieve last 20 trusted IPs with reason and who added them |
+| `block_ip` | Write | Add IP to blacklist, remove from whitelist if present, mark all existing alerts from that IP as blocked |
+| `trust_ip` | Write | Add IP to whitelist, remove from blacklist if present |
+| `create_incident` | Write | Create a new incident with title, description, and priority (LOW/MEDIUM/HIGH/CRITICAL) |
+| `block_all_quarantined` | Write | Mass block all quarantined alert IPs — adds each unique IP to blacklist, marks all quarantined alerts as BLOCKED |
+
+- **Read tools** execute immediately and return data to the conversation
+- **Write tools** require user confirmation — the bot asks "Should I proceed?" before executing
+- **Conversation flow**: user message → Gemini with tool definitions → if function call returned, backend executes it → result sent back to Gemini → Gemini formats a natural language response
+- **Action badges**: green tag on messages when a destructive action was taken (e.g. "Action: Blocked IP")
+- Conversation history (last 8 messages) sent for multi-turn context
+- Markdown rendering in chat (bold, code blocks, bullet points, headings)
+- Suggestion chips on first load for common queries
+
 ### Teams Page
 
 - **Free/Premium users**: Upgrade prompt
@@ -530,11 +559,8 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | POST | `/api/incidents/{id}/link-alert` | Link an alert to an incident |
 | DELETE | `/api/incidents/{id}/unlink-alert/{alert_id}` | Unlink an alert from an incident |
 | GET | `/api/incidents/{id}/alerts` | List alerts linked to an incident |
-| GET | `/api/comparison/stats` | Per-engine alert counts (Exclusive only) |
-| POST | `/api/comparison/runs` | Run three-way comparison on real alerts (Exclusive only) |
-| GET | `/api/comparison/runs` | List past comparison runs |
-| GET | `/api/comparison/runs/{id}` | Get comparison run details with matched pairs |
-| DELETE | `/api/comparison/runs/{id}` | Delete a comparison run |
+| POST | `/api/chat` | DurianBot AI chat — accepts message + history, returns Gemini response with optional tool execution |
+| GET | `/api/analytics/export-pdf` | Download analytics report as PDF (server-generated, all 4 datasets) |
 
 ## Data Models
 
@@ -635,9 +661,9 @@ Root `.env` (shared by both services):
 - `JWT_SECRET_KEY` — shared JWT signing key
 - `THREATFOX_AUTH_KEY` — free API key from https://auth.abuse.ch/
 - `EMAIL_BACKEND` — `django.core.mail.backends.smtp.EmailBackend` (prod) or `console.EmailBackend` (dev)
-- `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USE_TLS` — SMTP server config (Resend: `smtp.resend.com`, `587`, `True`)
-- `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` — SMTP credentials (Resend: user `resend`, password = API key)
-- `DEFAULT_FROM_EMAIL` — sender address (must be on a verified Resend domain in production)
+- `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USE_TLS` — SMTP server config
+- `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` — SMTP credentials
+- `DEFAULT_FROM_EMAIL` — sender address
 - `FRONTEND_URL` — base URL used to build password reset links (default `http://localhost:5173`)
 
 Frontend `frontend/.env`:
@@ -924,13 +950,12 @@ Each config uses a different API key, so alerts are routed to the correct client
 - Analytics PDF export — all 4 charts in a single landscape A4 PDF with title and timestamp (jsPDF)
 
 ### April 7 — Password Reset via Email
-- Wired Django email via Resend SMTP (`smtp.resend.com:587`, STARTTLS) — config read from root `.env` (`EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL`, `FRONTEND_URL`)
+- Wired Django email via SMTP — config read from root `.env` (`EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL`, `FRONTEND_URL`)
 - Added `POST /api/auth/password-reset/request/` — accepts `{email}`, generates uid + token via Django's `default_token_generator`, sends reset link `${FRONTEND_URL}/reset-password?uid=...&token=...` via `send_mail`. Always returns 200 to prevent email enumeration. Logs `password_reset_requested` to AuditLog
 - Added `POST /api/auth/password-reset/confirm/` — accepts `{uid, token, new_password}`, decodes uid, validates token (3-day expiry from `PASSWORD_RESET_TIMEOUT`), enforces 8+ char min, calls `set_password()`. Logs `password_reset_completed`
 - Frontend: new `ForgotPassword.jsx` (email entry form) and `ResetPassword.jsx` (reads `?uid=&token=` from URL, new password + confirm fields, redirects to login on success). Routes `/forgot-password` and `/reset-password` registered in `main.jsx`
 - Added "Forgot password?" link next to the password label on the Login page
 - `authService.requestPasswordReset(email)` and `authService.confirmPasswordReset(uid, token, newPassword)` helpers
-- Note: Resend sandbox sender `onboarding@resend.dev` only delivers to the email registered on the Resend account — verify a domain in the Resend dashboard before sending to real users
 
 ### April 6 — Subscription Lifecycle, Landing Page Fixes
 - Built subscription lifecycle with duration-based plans — users select 1, 3, 6, or 12-month subscription durations when upgrading to Premium or Exclusive
@@ -976,14 +1001,7 @@ Each config uses a different API key, so alerts are routed to the correct client
 - create_incident: creates incident with title, description, priority
 - Action badge on chat messages — green "Action: Blocked IP" tag when a destructive action was taken
 
-### April 9 — Three-Way IDS Comparison, Watcher Setup Wizard, IDS Setup Guide
-- Rewrote IDS engine comparison to support **three-way correlation** (Snort vs Suricata vs Zeek) using real ingested alerts instead of pre-compiled sample data
-- Removed pre-compiled fixtures and samples registry — comparison now queries live alerts from the database within a user-selected time range (1h to 30d)
-- 7 agreement categories: `all_three`, `snort+suricata`, `snort+zeek`, `suricata+zeek`, `snort_only`, `suricata_only`, `zeek_only`
-- New `/api/comparison/stats` endpoint showing per-engine alert counts
-- Requires at least 2 engines with data to run a comparison
-- Updated `ComparisonRun` model with `zeek_count`, all combination counts, `start_date`/`end_date` fields
-- Frontend: replaced sample picker with time range selector, added Zeek column to results table, engine stats overview, 7 colour-coded agreement badges
+### April 9 — Watcher Setup Wizard, IDS Setup Guide
 - Built **interactive CLI setup wizard** for IDS watcher (`python watcher.py setup`)
   - Prompts for API URL and key with connection test
   - Multi-IDS selection (comma-separated) — all run concurrently
@@ -1006,6 +1024,14 @@ Each config uses a different API key, so alerts are routed to the correct client
   - Dismissible with localStorage persistence
   - Auto-disappears once an API key is created
 - Removed auth-service Dockerfile (was using dev server `manage.py runserver`, not needed for Railway/Render deployment)
+
+### April 12 — Team Alert Assignment, Stats Cleanup
+- Added **Assign button** to the live alert feed for team leaders — click to open an inline member dropdown, assigns alert via `PATCH /api/team/alerts/{alert_id}/assign`
+- Once assigned, the button is replaced with a blue badge showing the assignee's name
+- Only visible to users with `is_team_leader` and an active team
+- Removed **Alerts per Member** card from the Team view (backend query and frontend card)
+- Team stats now show only Total Alerts and Unassigned counts
+- Removed **Engine Comparison** feature entirely — frontend page, backend routes/model, correlator, sidebar nav, and API endpoints
 
 ## Design
 

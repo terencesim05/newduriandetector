@@ -300,19 +300,6 @@ export default function Teams() {
             <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Unassigned</p>
             <p className="text-2xl font-bold text-yellow-400">{teamStats.unassigned}</p>
           </div>
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Alerts per Member</p>
-            <div className="space-y-1 mt-2">
-              {teamStats.per_member.length > 0 ? teamStats.per_member.map((m) => (
-                <div key={m.user_id} className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400">{m.name}</span>
-                  <span className="text-white font-mono">{m.count}</span>
-                </div>
-              )) : (
-                <span className="text-xs text-slate-500">No assignments yet</span>
-              )}
-            </div>
-          </div>
         </div>
       )}
 

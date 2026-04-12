@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Radio, X, Trash2, ShieldBan, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Radio, X, Trash2, ShieldBan, ShieldCheck, ExternalLink, UserPlus, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { alertService } from '../services/alertService';
+import { useAuth } from '../context/AuthContext';
 
 const severityColors = {
   CRITICAL: 'bg-red-500/15 text-red-400 border-red-500/30',
@@ -29,7 +30,37 @@ function timeAgo(dateStr) {
 }
 
 export default function LiveAlertFeed({ alerts, connected, onDismiss, onDismissAll }) {
+  const { user } = useAuth();
   const listRef = useRef(null);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [assigningId, setAssigningId] = useState(null);
+  const [assignedAlerts, setAssignedAlerts] = useState({});
+
+  const isTeamLeader = user?.is_team_leader && user?.team_id;
+
+  useEffect(() => {
+    if (isTeamLeader) {
+      import('../services/authService').then(({ authService }) => {
+        authService.getMyTeam().then((team) => {
+          if (team?.members) setTeamMembers(team.members);
+        }).catch(() => {});
+      });
+    }
+  }, [isTeamLeader]);
+
+  const handleAssign = async (alert, memberId) => {
+    const member = teamMembers.find((m) => m.id === memberId);
+    if (!member) return;
+    const name = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.email;
+    try {
+      await alertService.assignAlert(alert.id, memberId, name);
+      setAssignedAlerts((prev) => ({ ...prev, [alert.id]: name }));
+      setAssigningId(null);
+      toast.success(`Assigned to ${name}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(59,130,246,0.3)' } });
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to assign', { style: { background: '#1e1e2e', color: '#fff' } });
+    }
+  };
 
   useEffect(() => {
     if (listRef.current) {
@@ -169,6 +200,42 @@ export default function LiveAlertFeed({ alerts, connected, onDismiss, onDismissA
                     <ShieldCheck className="w-3.5 h-3.5" />
                     Trust IP
                   </button>
+                  {isTeamLeader ? (
+                    assignedAlerts[alert.id] || alert.assigned_name ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium">
+                        <UserCheck className="w-3.5 h-3.5" />
+                        {assignedAlerts[alert.id] || alert.assigned_name}
+                      </span>
+                    ) : assigningId === alert.id ? (
+                      <select
+                        autoFocus
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) handleAssign(alert, parseInt(e.target.value));
+                        }}
+                        onBlur={() => setAssigningId(null)}
+                        className="bg-white/[0.04] border border-blue-500/30 rounded-lg px-3 py-1.5 text-xs text-slate-300 outline-none cursor-pointer appearance-none"
+                      >
+                        <option value="">Select member...</option>
+                        {teamMembers.map((m) => (
+                          <option key={m.id} value={m.id}>{m.first_name || m.email}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <button
+                        onClick={() => setAssigningId(alert.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-all cursor-pointer text-xs font-medium"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        Assign
+                      </button>
+                    )
+                  ) : (alert.assigned_to === user?.id || assignedAlerts[alert.id]) && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-medium">
+                      <UserCheck className="w-3.5 h-3.5" />
+                      Assigned to you
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

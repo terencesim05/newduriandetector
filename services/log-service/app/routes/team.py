@@ -111,18 +111,6 @@ async def get_team_stats(
     from sqlalchemy import func
     from app.models.alert import Alert
 
-    # Alerts per member (assigned)
-    q = (
-        select(Alert.assigned_to, Alert.assigned_name, func.count())
-        .where(Alert.team_id == user.team_id, Alert.assigned_to.isnot(None))
-        .group_by(Alert.assigned_to, Alert.assigned_name)
-    )
-    result = await db.execute(q)
-    per_member = [
-        {"user_id": row[0], "name": row[1] or "Unknown", "count": row[2]}
-        for row in result.all()
-    ]
-
     # Total alerts
     total_q = select(func.count()).where(Alert.team_id == user.team_id)
     total = (await db.execute(total_q)).scalar() or 0
@@ -136,5 +124,4 @@ async def get_team_stats(
     return {
         "total_alerts": total,
         "unassigned": unassigned,
-        "per_member": per_member,
     }

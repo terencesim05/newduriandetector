@@ -7,7 +7,6 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { alertService } from '../services/alertService';
 
 // ── Color palettes ──
@@ -260,59 +259,25 @@ export default function Analytics() {
 
   const handleApplyAll = () => fetchAll();
 
-  // PDF export — captures all 4 charts into a single PDF
+  // PDF export — backend-generated report
   const [exporting, setExporting] = useState(false);
   const exportPDF = async () => {
     setExporting(true);
     try {
-      const pdf = new jsPDF('landscape', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 15;
-
-      pdf.setFontSize(18);
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFillColor(10, 14, 26);
-      pdf.rect(0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight(), 'F');
-      pdf.text('DurianDetector — Analytics Report', margin, 20);
-      pdf.setFontSize(10);
-      pdf.setTextColor(150, 150, 150);
-      pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, 28);
-
-      const charts = [
-        { ref: timeRef, title: CHART_INFO.time.title },
-        { ref: catRef, title: CHART_INFO.category.title },
-        { ref: srcRef, title: CHART_INFO.source.title },
-        { ref: sevRef, title: CHART_INFO.severity.title },
-      ];
-
-      let y = 38;
-      for (let i = 0; i < charts.length; i++) {
-        const { ref, title } = charts[i];
-        if (!ref.current) continue;
-
-        if (i > 0 && i % 2 === 0) {
-          pdf.addPage();
-          pdf.setFillColor(10, 14, 26);
-          pdf.rect(0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight(), 'F');
-          y = 15;
-        }
-
-        const canvas = await html2canvas(ref.current, { backgroundColor: '#0a0e1a', scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = pageWidth - margin * 2;
-        const imgHeight = (canvas.height / canvas.width) * imgWidth;
-
-        pdf.setFontSize(11);
-        pdf.setTextColor(200, 200, 200);
-        pdf.text(title, margin, y);
-        y += 4;
-        pdf.addImage(imgData, 'PNG', margin, y, imgWidth, Math.min(imgHeight, 80));
-        y += Math.min(imgHeight, 80) + 10;
-      }
-
-      pdf.save('duriandetector-analytics.pdf');
+      const { days } = getDateRange(globalRange);
+      const blob = await alertService.exportAnalyticsPDF({
+        severity: severityFilter || undefined,
+        category: categoryFilter || undefined,
+        days,
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `duriandetector-analytics-${new Date().toISOString().slice(0, 10)}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
     } catch {
-      // Silent fail
+      setError('Failed to generate PDF report');
     } finally {
       setExporting(false);
     }

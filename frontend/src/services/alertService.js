@@ -167,6 +167,16 @@ export const alertService = {
     const response = await logApi.get('/api/analytics/severity-trends', { params });
     return response.data;
   },
+  async exportAnalyticsPDF({ startDate, endDate, severity, category, days } = {}) {
+    const params = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (severity) params.severity = severity;
+    if (category) params.category = category;
+    if (days) params.days = days;
+    const response = await logApi.get('/api/analytics/export-pdf', { params, responseType: 'blob' });
+    return response.data;
+  },
 
   // ML Configuration
   async getMLConfig() {

@@ -27,7 +27,6 @@ import IngestionLogs from './pages/IngestionLogs.jsx'
 import Analytics from './pages/Analytics.jsx'
 import GeoMap from './pages/GeoMap.jsx'
 import Chatbot from './pages/Chatbot.jsx'
-import EngineComparison from './pages/EngineComparison.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import UserManagement from './pages/admin/UserManagement.jsx'
 import SubscriptionManagement from './pages/admin/SubscriptionManagement.jsx'
@@ -59,7 +58,6 @@ createRoot(document.getElementById('root')).render(
           <Route path="/analytics" element={<DashboardLayout><Analytics /></DashboardLayout>} />
           <Route path="/attack-globe" element={<DashboardLayout><GeoMap /></DashboardLayout>} />
           <Route path="/chatbot" element={<DashboardLayout><Chatbot /></DashboardLayout>} />
-          <Route path="/engine-comparison" element={<DashboardLayout><EngineComparison /></DashboardLayout>} />
           <Route path="/teams" element={<DashboardLayout><Teams /></DashboardLayout>} />
           <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />
           {/* Admin routes */}
