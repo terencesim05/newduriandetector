@@ -20,6 +20,7 @@ from app.routes.ingestion_logs import router as ingestion_logs_router
 from app.routes.api_keys import router as api_keys_router
 from app.routes.incidents import router as incidents_router
 from app.routes.chatbot import router as chatbot_router
+from app.routes.ids_comparison import router as ids_comparison_router
 
 
 @asynccontextmanager
@@ -67,6 +68,7 @@ app.include_router(ingestion_logs_router)
 app.include_router(api_keys_router)
 app.include_router(incidents_router)
 app.include_router(chatbot_router)
+app.include_router(ids_comparison_router)
 
 
 @app.get("/health")

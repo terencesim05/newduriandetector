@@ -37,6 +37,12 @@ _CATEGORY_ENC = {
     "COMMAND_INJECTION": 10,
 }
 
+# IDS source encoding
+_IDS_SOURCE_ENC = {"suricata": 1, "zeek": 2, "snort": 3, "kismet": 4}
+
+# Protocol encoding
+_PROTOCOL_ENC = {"TCP": 1, "UDP": 2, "ICMP": 3, "HTTP": 4, "802.11": 5}
+
 # Cache: model_type -> loaded model
 _models: dict = {}
 
@@ -65,8 +71,16 @@ def _load_model(model_type: str = "random_forest"):
     return model
 
 
+def clear_cache():
+    """Clear loaded model cache (call after retraining)."""
+    _models.clear()
+    logger.info("ML model cache cleared")
+
+
 def predict_threat(severity: str, category: str, alert_count_last_hour: int = 1,
                    source_port: int = 0, destination_port: int = 0,
+                   ids_source: str = "", protocol: str = "",
+                   has_threat_intel: int = 0,
                    model_type: str = "random_forest") -> dict | None:
     """
     Predict whether an alert is a threat.
@@ -76,20 +90,33 @@ def predict_threat(severity: str, category: str, alert_count_last_hour: int = 1,
     if model is None:
         return None
 
-    features = [[
+    base_features = [
         _SEVERITY_ENC.get(severity, 2),
         _CATEGORY_ENC.get(category, 1),
         alert_count_last_hour,
         source_port or 0,
         destination_port or 0,
-    ]]
+    ]
+
+    extra_features = [
+        _IDS_SOURCE_ENC.get(ids_source, 0),
+        _PROTOCOL_ENC.get(protocol.upper() if protocol else "", 0),
+        int(has_threat_intel),
+    ]
+
+    # Check how many features the model expects (backward compat with old 5-feature models)
+    try:
+        expected = model.n_features_in_
+    except AttributeError:
+        expected = 5
+
+    if expected >= 8:
+        features = [base_features + extra_features]
+    else:
+        features = [base_features]
 
     if model_type == "isolation_forest":
-        # IsolationForest: score_samples returns negative anomaly scores
-        # More negative = more anomalous. Convert to 0.0-1.0 confidence.
         raw_score = model.score_samples(features)[0]
-        # Typical range is roughly -0.5 (anomaly) to 0.5 (normal)
-        # Clamp and invert so higher = more threatening
         threat_prob = max(0.0, min(1.0, 0.5 - raw_score))
     else:
         proba = model.predict_proba(features)[0]

@@ -5,6 +5,7 @@ import {
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  Treemap, ComposedChart, Area,
 } from 'recharts';
 import html2canvas from 'html2canvas';
 import { alertService } from '../services/alertService';
@@ -30,6 +31,7 @@ const CHART_TYPES = [
   { value: 'line', label: 'Line chart' },
   { value: 'bar', label: 'Bar chart' },
   { value: 'pie', label: 'Pie chart' },
+  { value: 'treemap', label: 'Treemap' },
 ];
 
 const PALETTE_LABELS = {
@@ -87,6 +89,34 @@ function CustomChart({ config, data, colors }) {
 
   const dataKey = 'count';
 
+  if (config.chartType === 'treemap') {
+    const treemapData = data.map((d, i) => ({ name: d.name, size: d.count, fill: colors[i % colors.length] }));
+    return (
+      <ResponsiveContainer width="100%" height={300}>
+        <Treemap
+          data={treemapData}
+          dataKey="size"
+          nameKey="name"
+          aspectRatio={4 / 3}
+          content={({ x, y, width, height, name, size, fill }) => {
+            if (width < 30 || height < 20) return null;
+            return (
+              <g>
+                <rect x={x} y={y} width={width} height={height} fill={fill} stroke="rgba(0,0,0,0.3)" strokeWidth={1} rx={4} />
+                {width > 50 && height > 30 && (
+                  <>
+                    <text x={x + width / 2} y={y + height / 2 - 6} textAnchor="middle" fill="#fff" fontSize={11} fontWeight={600}>{name}</text>
+                    <text x={x + width / 2} y={y + height / 2 + 10} textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize={10}>{size}</text>
+                  </>
+                )}
+              </g>
+            );
+          }}
+        />
+      </ResponsiveContainer>
+    );
+  }
+
   if (config.chartType === 'pie') {
     return (
       <ResponsiveContainer width="100%" height={300}>
@@ -119,15 +149,16 @@ function CustomChart({ config, data, colors }) {
   );
 }
 
-// ── Severity Trend Chart (always stacked bar) ──
+// ── Severity Trend Chart (stacked bar + total line) ──
 function SeverityTrendChart({ data, colors }) {
   if (!data || data.length === 0) {
     return <div className="flex items-center justify-center h-64 text-sm text-slate-500">No data available</div>;
   }
   const sevColors = { CRITICAL: '#EF4444', HIGH: '#F97316', MEDIUM: '#F59E0B', LOW: '#64748B' };
+  const enriched = data.map(d => ({ ...d, total: (d.CRITICAL || 0) + (d.HIGH || 0) + (d.MEDIUM || 0) + (d.LOW || 0) }));
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+      <ComposedChart data={enriched} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
         <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} tickLine={false} />
         <YAxis tick={{ fill: '#64748b', fontSize: 11 }} tickLine={false} allowDecimals={false} />
@@ -137,7 +168,8 @@ function SeverityTrendChart({ data, colors }) {
         <Bar dataKey="HIGH" stackId="a" fill={sevColors.HIGH} />
         <Bar dataKey="MEDIUM" stackId="a" fill={sevColors.MEDIUM} />
         <Bar dataKey="LOW" stackId="a" fill={sevColors.LOW} />
-      </BarChart>
+        <Line type="monotone" dataKey="total" stroke="#3B82F6" strokeWidth={2} dot={false} name="Total" />
+      </ComposedChart>
     </ResponsiveContainer>
   );
 }

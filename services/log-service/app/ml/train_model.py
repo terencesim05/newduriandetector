@@ -44,7 +44,16 @@ def main():
     df = pd.read_csv(DATA_PATH)
     print(f"Loaded {len(df)} samples\n")
 
-    features = ["severity", "category", "alert_count_last_hour", "source_port", "destination_port"]
+    features = [
+        "severity", "category", "alert_count_last_hour",
+        "source_port", "destination_port",
+        "ids_source", "protocol", "has_threat_intel",
+    ]
+
+    # Backward compat: if old training data lacks new columns, fill with defaults
+    for col in features:
+        if col not in df.columns:
+            df[col] = 0
     X = df[features]
     y = df["is_threat"]
 

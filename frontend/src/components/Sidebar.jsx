@@ -21,6 +21,7 @@ import {
   ChevronDown,
   X,
   Bot,
+  GitCompareArrows,
 } from 'lucide-react';
 
 const navSections = [
@@ -44,6 +45,7 @@ const navSections = [
       { to: '/threat-intel', label: 'Threat Intel', icon: ShieldAlert },
       { to: '/analytics', label: 'Analytics', icon: BarChart3 },
       { to: '/attack-globe', label: 'GeoIP Map', icon: Globe },
+      { to: '/ids-comparison', label: 'IDS Comparison', icon: GitCompareArrows },
     ],
   },
   {

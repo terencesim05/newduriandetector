@@ -154,6 +154,9 @@ async def ingest_alerts(
                 alert_count_last_hour=1,
                 source_port=alert.source_port or 0,
                 destination_port=alert.destination_port or 0,
+                ids_source=alert.ids_source.value if hasattr(alert.ids_source, 'value') else (alert.ids_source or ""),
+                protocol=alert.protocol or "",
+                has_threat_intel=1 if flagged == "true" else 0,
                 model_type=ml_model_type,
             )
             if prediction:

@@ -178,6 +178,54 @@ export const alertService = {
     return response.data;
   },
 
+  // IDS Cross-Comparison
+  async getIDSSummary({ startDate, endDate, severity, category } = {}) {
+    const params = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (severity) params.severity = severity;
+    if (category) params.category = category;
+    const response = await logApi.get('/api/ids-comparison/summary', { params });
+    return response.data;
+  },
+  async getDetectionOverlap({ startDate, endDate, severity, category, timeWindowMinutes } = {}) {
+    const params = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (severity) params.severity = severity;
+    if (category) params.category = category;
+    if (timeWindowMinutes) params.time_window_minutes = timeWindowMinutes;
+    const response = await logApi.get('/api/ids-comparison/detection-overlap', { params });
+    return response.data;
+  },
+  async getAccuracyMatrix({ startDate, endDate, severity, category } = {}) {
+    const params = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (severity) params.severity = severity;
+    if (category) params.category = category;
+    const response = await logApi.get('/api/ids-comparison/accuracy-matrix', { params });
+    return response.data;
+  },
+  async getIDSTimeline({ startDate, endDate, severity, category, days } = {}) {
+    const params = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (severity) params.severity = severity;
+    if (category) params.category = category;
+    if (days) params.days = days;
+    const response = await logApi.get('/api/ids-comparison/timeline', { params });
+    return response.data;
+  },
+  async getCategoryByIDS({ startDate, endDate, severity } = {}) {
+    const params = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (severity) params.severity = severity;
+    const response = await logApi.get('/api/ids-comparison/category-by-ids', { params });
+    return response.data;
+  },
+
   // ML Configuration
   async getMLConfig() {
     const response = await logApi.get('/api/ml-config');
