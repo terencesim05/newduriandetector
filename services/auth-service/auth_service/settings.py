@@ -134,7 +134,9 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS — comma-separated list in env
+# CORS — comma-separated list in env, or allow all with CORS_ALLOW_ALL_ORIGINS=True
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default='False', cast=bool)
+
 CORS_ALLOWED_ORIGINS = [
     o.strip() for o in config(
         'CORS_ALLOWED_ORIGINS',
