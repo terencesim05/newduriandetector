@@ -94,7 +94,10 @@ function App() {
               <a href="#features" className="text-sm text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/5 transition-all">Features</a>
               <a href="#pricing" className="text-sm text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/5 transition-all">Pricing</a>
               <div className="w-px h-5 bg-white/10 mx-2" />
-              <Link to="/login" className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all ml-1">
+              <Link to="/login" className="text-sm text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/5 transition-all">
+                Sign In
+              </Link>
+              <Link to="/signup" className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all ml-1">
                 Get Started
               </Link>
             </div>
