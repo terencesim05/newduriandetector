@@ -193,7 +193,7 @@ Investigation reports that group related alerts together. Alerts are automated s
 
 ### DurianBot (AI Security Assistant)
 
-AI-powered chatbot built on Google Gemini (`gemini-2.5-flash`) with function calling. DurianBot can answer questions about your security data and take actions directly from the chat.
+AI-powered chatbot built on Groq (`llama-3.3-70b-versatile`) with function calling. DurianBot can answer questions about your security data and take actions directly from the chat.
 
 **Tier access:**
 - **Free**: 5 messages per session (DurianBot Basic)
