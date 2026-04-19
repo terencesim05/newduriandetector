@@ -17,7 +17,7 @@ api:
 # Batch settings — the watcher groups new lines and POSTs them in batches.
 batch:
   size: 50          # Max alerts per POST request
-  interval: 5       # Seconds to wait before flushing a partial batch
+  interval: 1       # Seconds to wait before flushing a partial batch
 
 # Enable / disable each IDS watcher independently.
 # Set `enabled: true` and point `path` to the log file the IDS writes to.

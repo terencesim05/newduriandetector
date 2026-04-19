@@ -380,7 +380,7 @@ def run_setup(output_path: str = "config.yaml"):
         },
         "batch": {
             "size": 50,
-            "interval": 5,
+            "interval": 1,
         },
         "suricata": {"enabled": False, "path": "/var/log/suricata/eve.json"},
         "snort": {"enabled": False, "path": "/var/log/snort/alert_json.txt"},
@@ -440,11 +440,11 @@ def run_setup(output_path: str = "config.yaml"):
 
     # ── Batch settings ──
     print("  -- Batch Settings --")
-    if _prompt_yn("Use defaults (50 alerts/batch, 5s interval)?"):
+    if _prompt_yn("Use defaults (50 alerts/batch, 1s interval)?"):
         pass
     else:
         batch_size = _prompt("Max alerts per batch", "50")
-        batch_interval = _prompt("Flush interval in seconds", "5")
+        batch_interval = _prompt("Flush interval in seconds", "1")
         config["batch"]["size"] = int(batch_size)
         config["batch"]["interval"] = int(batch_interval)
     print()
@@ -473,7 +473,7 @@ async def main(config_path: str):
         api_key=api_cfg.get("api_key", ""),
         token=api_cfg.get("token", ""),
         batch_size=batch_cfg.get("size", 50),
-        batch_interval=batch_cfg.get("interval", 5),
+        batch_interval=batch_cfg.get("interval", 1),
     )
     await client.start()
 
