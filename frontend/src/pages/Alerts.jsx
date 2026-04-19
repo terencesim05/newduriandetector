@@ -60,7 +60,7 @@ function AlertDetailModal({ alert, onClose }) {
           )}
           {alert.is_blocked && (
             <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-red-500/15 text-red-400 border-red-500/30">
-              <ShieldBan className="w-3 h-3" /> BLOCKED
+              <ShieldBan className="w-3 h-3" /> FLAGGED
             </span>
           )}
           {alert.quarantine_status === 'QUARANTINED' && (
@@ -336,21 +336,21 @@ export default function Alerts() {
       (a) => a.severity === 'CRITICAL' && !a.is_blocked && !a.is_whitelisted
     );
     if (criticalAlerts.length === 0) {
-      toast('No unblocked critical alerts to block', { style: { background: '#1e1e2e', color: '#fff' } });
+      toast('No un-flagged critical alerts to flag', { style: { background: '#1e1e2e', color: '#fff' } });
       return;
     }
     const uniqueIPs = [...new Set(criticalAlerts.map((a) => a.source_ip))];
     let blocked = 0;
     for (const ip of uniqueIPs) {
       try {
-        await alertService.addToBlacklist({ entry_type: 'IP', value: ip, reason: 'Mass block — critical severity' });
+        await alertService.addToBlacklist({ entry_type: 'IP', value: ip, reason: 'Mass flag — critical severity' });
         blocked++;
       } catch {
         // Skip duplicates or errors
       }
     }
     setAlerts((prev) => prev.map((a) => a.severity === 'CRITICAL' && uniqueIPs.includes(a.source_ip) ? { ...a, is_blocked: true } : a));
-    toast.success(`Blocked ${blocked} critical IP${blocked !== 1 ? 's' : ''}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(239,68,68,0.3)' } });
+    toast.success(`Flagged ${blocked} critical IP${blocked !== 1 ? 's' : ''}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(239,68,68,0.3)' } });
   };
 
   return (
@@ -362,7 +362,7 @@ export default function Alerts() {
           className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
         >
           <ShieldBan className="w-4 h-4" />
-          Block All Critical
+          Flag All Critical
         </button>
       </div>
 
@@ -547,7 +547,7 @@ export default function Alerts() {
                       ) : alert.is_blocked ? (
                         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-red-500/15 text-red-400 border-red-500/30">
                           <ShieldBan className="w-3 h-3" />
-                          BLOCKED
+                          FLAGGED
                         </span>
                       ) : alert.quarantine_status === 'QUARANTINED' ? (
                         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-yellow-500/15 text-yellow-400 border-yellow-500/30">
@@ -613,16 +613,16 @@ export default function Alerts() {
                             <button
                               onClick={async () => {
                                 try {
-                                  await alertService.addToBlacklist({ entry_type: 'IP', value: alert.source_ip, reason: `Blocked from alert ${alert.category}` });
+                                  await alertService.addToBlacklist({ entry_type: 'IP', value: alert.source_ip, reason: `Flagged from alert ${alert.category}` });
                                   setAlerts((prev) => prev.map((a) => a.id === alert.id ? { ...a, is_blocked: true } : a));
-                                  toast.success(`Blocked ${alert.source_ip}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(239,68,68,0.3)' } });
+                                  toast.success(`Flagged ${alert.source_ip}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(239,68,68,0.3)' } });
                                 } catch (err) {
-                                  toast.error(err.response?.data?.detail || 'Failed to block IP', { style: { background: '#1e1e2e', color: '#fff' } });
+                                  toast.error(err.response?.data?.detail || 'Failed to flag IP', { style: { background: '#1e1e2e', color: '#fff' } });
                                 }
                               }}
                               className="text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer"
                             >
-                              Block IP
+                              Flag as Threat
                             </button>
                             <span className="text-slate-700">|</span>
                             <button

@@ -298,7 +298,7 @@ export default function MLConfig() {
               <div className="bg-white/[0.03] rounded-lg p-3">
                 <p className="text-sm text-white font-medium mb-1">3. Act</p>
                 <p className="text-xs text-slate-400">
-                  Boosted scores can push alerts into quarantine (0.7+) or auto-block (0.9+), same as rule-based scoring.
+                  Boosted scores can push alerts into quarantine (0.7+) or auto-flag as threat (0.9+), same as rule-based scoring.
                 </p>
               </div>
             </div>

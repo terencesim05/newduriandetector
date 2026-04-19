@@ -199,7 +199,7 @@ export default function Blacklist() {
               disabled={submitting || !form.value.trim()}
               className="px-4 py-2 rounded-lg bg-red-600 text-sm text-white font-medium hover:bg-red-500 transition-colors cursor-pointer disabled:opacity-50"
             >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Block'}
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Flag as Threat'}
             </button>
           </div>
         </form>
@@ -215,7 +215,7 @@ export default function Blacklist() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                {['Type', 'Value', 'Reason', 'Added By', 'Blocks', 'Date', ''].map((h) => (
+                {['Type', 'Value', 'Reason', 'Added By', 'Flags', 'Date', ''].map((h) => (
                   <th key={h} className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">{h}</th>
                 ))}
               </tr>

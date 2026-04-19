@@ -168,7 +168,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: 'This Week', value: alertStats?.alerts_this_week || 0, color: 'text-blue-400' },
-              { label: 'Blocked', value: alertStats?.blocked_alerts || 0, color: 'text-red-400' },
+              { label: 'Flagged', value: alertStats?.blocked_alerts || 0, color: 'text-red-400' },
               { label: 'Quarantined', value: alertStats?.quarantined_alerts || 0, color: 'text-yellow-400' },
               { label: 'Teams', value: teamData?.total || 0, color: 'text-purple-400' },
             ].map((item) => (

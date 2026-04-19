@@ -63,7 +63,7 @@ function LogDetailModal({ log, onClose }) {
             <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-emerald-500/15 text-emerald-400 border-emerald-500/30"><ShieldCheck className="w-3 h-3" /> TRUSTED</span>
           )}
           {log.is_blocked && (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-red-500/15 text-red-400 border-red-500/30"><ShieldBan className="w-3 h-3" /> BLOCKED</span>
+            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-red-500/15 text-red-400 border-red-500/30"><ShieldBan className="w-3 h-3" /> FLAGGED</span>
           )}
           {log.quarantine_status === 'QUARANTINED' && (
             <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-yellow-500/15 text-yellow-400 border-yellow-500/30"><ShieldQuestion className="w-3 h-3" /> QUARANTINED</span>
@@ -226,9 +226,9 @@ export default function IngestionLogs() {
     try {
       const updated = await ingestionService.blockLog(log.id);
       setLogs((prev) => prev.map((l) => l.id === log.id ? updated : l));
-      toast.success(`Blocked ${log.source_ip}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(239,68,68,0.3)' } });
+      toast.success(`Flagged ${log.source_ip}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(239,68,68,0.3)' } });
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to block', { style: { background: '#1e1e2e', color: '#fff' } });
+      toast.error(err.response?.data?.detail || 'Failed to flag', { style: { background: '#1e1e2e', color: '#fff' } });
     }
   };
 
@@ -389,7 +389,7 @@ export default function IngestionLogs() {
             <option value="All">All Statuses</option>
             <option value="QUARANTINED">Quarantined</option>
             <option value="RELEASED">Released</option>
-            <option value="BLOCKED">Blocked</option>
+            <option value="BLOCKED">Flagged</option>
           </select>
           {batches.length > 0 && (
             <select value={batchFilter} onChange={(e) => setBatchFilter(e.target.value)} className={selectClass}>
@@ -444,7 +444,7 @@ export default function IngestionLogs() {
                         {log.is_whitelisted ? (
                           <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-emerald-500/15 text-emerald-400 border-emerald-500/30"><ShieldCheck className="w-3 h-3" /> TRUSTED</span>
                         ) : log.is_blocked ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-red-500/15 text-red-400 border-red-500/30"><ShieldBan className="w-3 h-3" /> BLOCKED</span>
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-red-500/15 text-red-400 border-red-500/30"><ShieldBan className="w-3 h-3" /> FLAGGED</span>
                         ) : log.quarantine_status === 'QUARANTINED' ? (
                           <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border bg-yellow-500/15 text-yellow-400 border-yellow-500/30"><ShieldQuestion className="w-3 h-3" /> QUARANTINED</span>
                         ) : log.flagged_by_threatfox === 'true' ? (
@@ -457,7 +457,7 @@ export default function IngestionLogs() {
                           {!log.is_blocked && !log.is_whitelisted && (
                             <>
                               <span className="text-slate-700">|</span>
-                              <button onClick={() => handleBlock(log)} className="text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer">Block</button>
+                              <button onClick={() => handleBlock(log)} className="text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer">Flag as Threat</button>
                               <span className="text-slate-700">|</span>
                               <button onClick={() => handleTrust(log)} className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer">Trust</button>
                             </>

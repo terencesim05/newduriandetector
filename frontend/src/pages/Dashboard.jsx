@@ -77,7 +77,7 @@ export default function Dashboard() {
     { label: 'Total Alerts', value: liveStats?.total ?? '—', icon: Bell, color: 'blue' },
     { label: 'Critical Alerts', value: liveStats?.critical ?? '—', icon: ShieldAlert, color: 'red' },
     { label: 'Alerts Today', value: liveStats?.today ?? '—', icon: AlertTriangle, color: 'orange' },
-    { label: 'Blocked', value: liveStats?.blocked ?? '—', icon: Activity, color: 'emerald' },
+    { label: 'Flagged', value: liveStats?.blocked ?? '—', icon: Activity, color: 'emerald' },
   ];
 
   return (

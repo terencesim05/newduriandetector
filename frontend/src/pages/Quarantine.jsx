@@ -113,7 +113,7 @@ export default function Quarantine() {
           <p className="text-2xl font-bold text-emerald-400">{stats.released}</p>
         </div>
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Blocked</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Flagged</p>
           <p className="text-2xl font-bold text-red-400">{stats.blocked}</p>
         </div>
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
@@ -127,12 +127,12 @@ export default function Quarantine() {
         <option value="All">All Statuses</option>
         <option value="QUARANTINED">Pending Review</option>
         <option value="RELEASED">Released</option>
-        <option value="BLOCKED">Blocked</option>
+        <option value="BLOCKED">Flagged</option>
       </select>
 
       {/* Info */}
       <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-4 py-3 text-sm text-yellow-400/80">
-        Alerts with threat score between 0.7 and 0.9 are held here for review. Score 0.9+ is auto-blocked. Score below 0.7 passes through normally.
+        Alerts with threat score between 0.7 and 0.9 are held here for review. Score 0.9+ is auto-flagged as a threat. Score below 0.7 passes through normally.
       </div>
 
       {error && (
@@ -199,7 +199,7 @@ export default function Quarantine() {
                             className="inline-flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer disabled:opacity-50"
                           >
                             <ShieldBan className="w-3 h-3" />
-                            Block
+                            Flag as Threat
                           </button>
                           <span className="text-slate-700">|</span>
                           <button

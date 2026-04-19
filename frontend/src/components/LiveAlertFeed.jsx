@@ -70,11 +70,11 @@ export default function LiveAlertFeed({ alerts, connected, onDismiss, onDismissA
 
   const handleBlock = async (alert) => {
     try {
-      await alertService.addToBlacklist({ entry_type: 'IP', value: alert.source_ip, reason: `Blocked from live feed — ${alert.category}` });
-      toast.success(`Blocked ${alert.source_ip}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(239,68,68,0.3)' } });
+      await alertService.addToBlacklist({ entry_type: 'IP', value: alert.source_ip, reason: `Flagged from live feed — ${alert.category}` });
+      toast.success(`Flagged ${alert.source_ip}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(239,68,68,0.3)' } });
       if (onDismiss) onDismiss(alert.id);
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to block IP', { style: { background: '#1e1e2e', color: '#fff' } });
+      toast.error(err.response?.data?.detail || 'Failed to flag IP', { style: { background: '#1e1e2e', color: '#fff' } });
     }
   };
 
@@ -191,7 +191,7 @@ export default function LiveAlertFeed({ alerts, connected, onDismiss, onDismissA
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all cursor-pointer text-xs font-medium"
                   >
                     <ShieldBan className="w-3.5 h-3.5" />
-                    Block IP
+                    Flag as Threat
                   </button>
                   <button
                     onClick={() => handleTrust(alert)}

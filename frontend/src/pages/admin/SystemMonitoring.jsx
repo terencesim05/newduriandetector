@@ -104,7 +104,7 @@ export default function SystemMonitoring() {
           { label: 'Total Alerts', value: alertStats?.total_alerts || 0, icon: Bell, color: 'text-blue-400' },
           { label: 'Today', value: alertStats?.alerts_today || 0, icon: Activity, color: 'text-emerald-400' },
           { label: 'This Week', value: alertStats?.alerts_this_week || 0, icon: Activity, color: 'text-purple-400' },
-          { label: 'Blocked', value: alertStats?.blocked_alerts || 0, icon: XCircle, color: 'text-red-400' },
+          { label: 'Flagged', value: alertStats?.blocked_alerts || 0, icon: XCircle, color: 'text-red-400' },
           { label: 'Quarantined', value: alertStats?.quarantined_alerts || 0, icon: AlertTriangle, color: 'text-yellow-400' },
         ].map((m) => (
           <div key={m.label} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">

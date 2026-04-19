@@ -70,7 +70,7 @@ export default function Chatbot() {
   const storageKey = `durianbot_history_${user?.id || 'anon'}`;
   const greeting = {
     role: 'assistant',
-    content: `Hi${user?.first_name ? ` ${user.first_name}` : ''}! I'm **DurianBot**, your security analyst assistant.\n\nI can help you with:\n- Viewing alerts, stats, and threat trends\n- Checking your blacklist and whitelist\n- **Blocking or trusting IPs** (I'll ask you to confirm first)\n- **Creating incidents** from suspicious activity\n- Explaining threats and recommending actions\n\nWhat would you like to do?`,
+    content: `Hi${user?.first_name ? ` ${user.first_name}` : ''}! I'm **DurianBot**, your security analyst assistant.\n\nI can help you with:\n- Viewing alerts, stats, and threat trends\n- Checking your blacklist and whitelist\n- **Flagging or trusting IPs** (I'll ask you to confirm first)\n- **Creating incidents** from suspicious activity\n- Explaining threats and recommending actions\n\nWhat would you like to do?`,
   };
   const [messages, setMessages] = useState(() => {
     try {
@@ -123,7 +123,7 @@ export default function Chatbot() {
       });
 
       const actionLabel = res.data.action_taken
-        ? { block_ip: 'Blocked IP', trust_ip: 'Trusted IP', create_incident: 'Created Incident', block_all_quarantined: 'Mass Blocked Quarantined', get_stats: null, get_alerts: null, get_blacklist: null, get_whitelist: null }[res.data.action_taken]
+        ? { block_ip: 'Flagged IP', trust_ip: 'Trusted IP', create_incident: 'Created Incident', block_all_quarantined: 'Mass Flagged Quarantined', get_stats: null, get_alerts: null, get_blacklist: null, get_whitelist: null }[res.data.action_taken]
         : null;
       setMessages((prev) => [...prev, { role: 'assistant', content: res.data.reply, action: actionLabel }]);
     } catch (err) {

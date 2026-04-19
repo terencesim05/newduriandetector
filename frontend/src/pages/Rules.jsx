@@ -159,7 +159,7 @@ function RuleModal({ rule, onClose, onSave }) {
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" checked={form.actions.auto_block || false} onChange={(e) => setAct('auto_block', e.target.checked)} className="accent-red-500" />
-                <span className="text-sm text-slate-300">Auto-block IP (add to blacklist)</span>
+                <span className="text-sm text-slate-300">Auto-flag IP as threat (add to blacklist)</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" checked={form.actions.notify_admin || false} onChange={(e) => setAct('notify_admin', e.target.checked)} className="accent-blue-500" />
@@ -272,7 +272,7 @@ export default function Rules() {
   const describeActions = (actions) => {
     const parts = [];
     if (actions.quarantine) parts.push('Quarantine');
-    if (actions.auto_block) parts.push('Block');
+    if (actions.auto_block) parts.push('Flag as Threat');
     if (actions.increase_threat_score) parts.push(`+${actions.increase_threat_score} score`);
     if (actions.notify_admin) parts.push('Notify');
     return parts.join(', ') || 'None';
