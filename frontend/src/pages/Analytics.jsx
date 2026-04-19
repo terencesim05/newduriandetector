@@ -90,12 +90,13 @@ function CustomChart({ config, data, colors }) {
 
   if (config.chartType === 'pie') {
     return (
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={340}>
         <PieChart>
-          <Pie data={data} dataKey={dataKey} nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+          <Pie data={data} dataKey={dataKey} nameKey="name" cx="50%" cy="45%" outerRadius={90} label={({ percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false}>
             {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
           </Pie>
           <Tooltip contentStyle={{ background: '#0f1320', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#fff' }} />
+          <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
         </PieChart>
       </ResponsiveContainer>
     );
