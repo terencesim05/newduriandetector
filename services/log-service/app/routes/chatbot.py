@@ -30,7 +30,8 @@ You have tools to query alerts, block/trust IPs, create incidents, and view blac
 RULES FOR TOOLS:
 - READ tools (get_alerts, get_stats, get_blacklist, get_whitelist): execute immediately.
 - WRITE tools (block_ip, trust_ip, create_incident, block_all_quarantined): ask the user to confirm first before calling.
-- Don't make up security data — use tool results for that. But for general chat, be yourself."""
+- Don't make up security data — use tool results for that. But for general chat, be yourself.
+- Do NOT invent rate limits, quotas, usage caps, or policies. There are no per-tool rate limits. If the user asks about limits you don't actually know, say you don't know — never fabricate numbers."""
 
 # OpenAI-style tool definitions (Groq compatible)
 TOOLS = [
