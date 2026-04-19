@@ -7,6 +7,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { alertService } from '../services/alertService';
 
 // ── Color palettes ──
@@ -259,24 +260,85 @@ export default function Analytics() {
 
   const handleApplyAll = () => fetchAll();
 
-  // PDF export — backend-generated report
+  // PDF export — client-side, captures rendered charts
   const [exporting, setExporting] = useState(false);
   const exportPDF = async () => {
     setExporting(true);
     try {
-      const { days } = getDateRange(globalRange);
-      const blob = await alertService.exportAnalyticsPDF({
-        severity: severityFilter || undefined,
-        category: categoryFilter || undefined,
-        days,
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `duriandetector-analytics-${new Date().toISOString().slice(0, 10)}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch {
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 12;
+      const contentW = pageW - margin * 2;
+
+      // Header
+      pdf.setFillColor(10, 14, 26);
+      pdf.rect(0, 0, pageW, 26, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(16);
+      pdf.text('DurianDetector Analytics Report', margin, 13);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      pdf.setTextColor(180, 190, 210);
+      const generated = new Date().toLocaleString('en-GB');
+      pdf.text(`Generated: ${generated}`, margin, 20);
+
+      // Filter summary
+      const filterBits = [];
+      if (severityFilter) filterBits.push(`Severity: ${severityFilter}`);
+      if (categoryFilter) filterBits.push(`Category: ${formatCategory(categoryFilter)}`);
+      const filterText = filterBits.length ? filterBits.join('   •   ') : 'All alerts (no filters)';
+      pdf.text(filterText, pageW - margin, 20, { align: 'right' });
+
+      let y = 34;
+
+      const charts = [
+        { ref: timeRef, title: CHART_INFO.time.title, subtitle: CHART_INFO.time.subtitle, range: timeConfig.range },
+        { ref: catRef,  title: CHART_INFO.category.title, subtitle: CHART_INFO.category.subtitle, range: catConfig.range },
+        { ref: srcRef,  title: CHART_INFO.source.title, subtitle: CHART_INFO.source.subtitle, range: srcConfig.range },
+        { ref: sevRef,  title: CHART_INFO.severity.title, subtitle: CHART_INFO.severity.subtitle, range: sevConfig.range },
+      ];
+
+      const rangeLabel = (key) => (DATE_RANGES.find(r => r.value === key) || {}).label || key;
+
+      for (const chart of charts) {
+        if (!chart.ref.current) continue;
+
+        const canvas = await html2canvas(chart.ref.current, {
+          backgroundColor: '#0a0e1a',
+          scale: 2,
+          useCORS: true,
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const imgW = contentW;
+        const imgH = (canvas.height / canvas.width) * imgW;
+
+        // Title block takes ~14mm; new page if we'd overflow
+        if (y + 14 + imgH > pageH - margin) {
+          pdf.addPage();
+          y = margin;
+        }
+
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFillColor(20, 26, 40);
+        pdf.rect(margin, y, contentW, 12, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        pdf.text(chart.title, margin + 3, y + 5);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(160, 170, 185);
+        pdf.text(`${chart.subtitle}   •   ${rangeLabel(chart.range)}`, margin + 3, y + 10);
+        y += 14;
+
+        pdf.addImage(imgData, 'PNG', margin, y, imgW, imgH);
+        y += imgH + 8;
+      }
+
+      pdf.save(`duriandetector-analytics-${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+      console.error(err);
       setError('Failed to generate PDF report');
     } finally {
       setExporting(false);
