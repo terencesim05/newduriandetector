@@ -158,3 +158,4 @@ else:
     print(f"[email] BREVO_API_KEY is empty — falling back to {EMAIL_BACKEND}")
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Durian Detector <durianadmin123@gmail.com>')
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
+print(f"[email] FRONTEND_URL={FRONTEND_URL}")
