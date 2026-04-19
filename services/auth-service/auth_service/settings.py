@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'anymail',
     # Local apps
     'users',
     'teams',
@@ -145,12 +146,15 @@ CORS_ALLOWED_ORIGINS = [
 # Django requires CSRF trusted origins for non-localhost cross-origin POSTs (admin, etc.)
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
-# Email
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = config('EMAIL_HOST', default='')
-EMAIL_PORT = config('EMAIL_PORT', cast=int, default=587)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool, default=True)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='no-reply@example.com')
+# Email — Brevo HTTP API (Railway blocks SMTP ports).
+# Falls back to console backend if BREVO_API_KEY is missing (useful in dev).
+_BREVO_KEY = config('BREVO_API_KEY', default='')
+if _BREVO_KEY:
+    EMAIL_BACKEND = 'anymail.backends.brevo.EmailBackend'
+    ANYMAIL = {'BREVO_API_KEY': _BREVO_KEY}
+    print(f"[email] Using Brevo backend (key length: {len(_BREVO_KEY)})")
+else:
+    EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+    print(f"[email] BREVO_API_KEY is empty — falling back to {EMAIL_BACKEND}")
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Durian Detector <durianadmin123@gmail.com>')
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
