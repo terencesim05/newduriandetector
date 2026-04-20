@@ -51,6 +51,32 @@ def _scoped_recent(user: CurrentUser, start: datetime):
     return apply_scope(select(Alert), Alert, user).where(Alert.detected_at >= start)
 
 
+@router.get("/engines-in-use")
+async def engines_in_use(
+    lookback_days: int = Query(30, ge=1, le=365),
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Which IDS engines have produced alerts for this tenant recently.
+
+    An engine with zero alerts in the lookback period is treated as "not in use"
+    so the UI can render only the engines actually feeding data.
+    """
+    start = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+    q = apply_scope(
+        select(Alert.ids_source).where(Alert.detected_at >= start).distinct(),
+        Alert,
+        user,
+    )
+    rows = (await db.execute(q)).scalars().all()
+    engines = sorted({(r.value if hasattr(r, "value") else r) for r in rows})
+    return {
+        "lookback_days": lookback_days,
+        "engines": engines,
+        "all_engines": ENGINES,
+    }
+
+
 @router.get("/engine-stats")
 async def engine_stats(
     window: str = Query("1h"),

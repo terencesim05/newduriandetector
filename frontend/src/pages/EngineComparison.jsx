@@ -15,6 +15,8 @@ const MIN_ENGINES = [
   { label: 'All 4', value: 4 },
 ];
 
+const ALL_ENGINES = ['suricata', 'zeek', 'snort', 'kismet'];
+
 const ENGINE_META = {
   suricata: { label: 'Suricata', accent: 'orange', dot: '#F97316' },
   zeek:     { label: 'Zeek',     accent: 'cyan',   dot: '#06B6D4' },
@@ -103,7 +105,7 @@ function EnginePill({ engine, active }) {
   );
 }
 
-function ConsensusTable({ data, loading }) {
+function ConsensusTable({ data, loading, activeEngines }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-40 text-slate-500">
@@ -140,7 +142,7 @@ function ConsensusTable({ data, loading }) {
               </td>
               <td className="py-2.5 px-3">
                 <div className="flex flex-wrap gap-1">
-                  {['suricata', 'zeek', 'snort', 'kismet'].map((e) => (
+                  {activeEngines.map((e) => (
                     <EnginePill key={e} engine={e} active={row.engines.includes(e)} />
                   ))}
                 </div>
@@ -161,7 +163,7 @@ function ConsensusTable({ data, loading }) {
   );
 }
 
-function OverlapMatrix({ data, loading }) {
+function OverlapMatrix({ data, loading, activeEngines }) {
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center h-40 text-slate-500">
@@ -169,7 +171,7 @@ function OverlapMatrix({ data, loading }) {
       </div>
     );
   }
-  const engines = data.engines || [];
+  const engines = (data.engines || []).filter((e) => activeEngines.includes(e));
   const matrix = data.matrix || {};
 
   let maxOff = 0;
@@ -231,7 +233,7 @@ function OverlapMatrix({ data, loading }) {
   );
 }
 
-function UniqueCoverage({ data, loading }) {
+function UniqueCoverage({ data, loading, activeEngines }) {
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center h-32 text-slate-500">
@@ -239,7 +241,7 @@ function UniqueCoverage({ data, loading }) {
       </div>
     );
   }
-  const engines = data.engines || [];
+  const engines = (data.engines || []).filter((e) => activeEngines.includes(e.ids_source));
   if (engines.every((e) => !e.alert_count)) {
     return (
       <div className="text-center py-6 text-sm text-slate-500">
@@ -249,7 +251,10 @@ function UniqueCoverage({ data, loading }) {
   }
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div
+      className="grid gap-3"
+      style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
+    >
       {engines.map((e) => {
         const meta = ENGINE_META[e.ids_source] || { label: e.ids_source, dot: '#3B82F6' };
         return (
@@ -278,12 +283,28 @@ export default function EngineComparison() {
   const [consensus, setConsensus] = useState(null);
   const [overlap, setOverlap] = useState(null);
   const [unique, setUnique] = useState(null);
+  const [observedEngines, setObservedEngines] = useState(null); // null = still loading
 
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingConsensus, setLoadingConsensus] = useState(true);
   const [loadingOverlap, setLoadingOverlap] = useState(true);
   const [loadingUnique, setLoadingUnique] = useState(true);
   const [error, setError] = useState('');
+
+  // Engines actually ingesting data (over the last 30 days). Falls back to all
+  // four if we haven't observed any yet, so new users still see the full layout.
+  useEffect(() => {
+    let cancelled = false;
+    alertService.getEnginesInUse(30)
+      .then((d) => { if (!cancelled) setObservedEngines(d.engines || []); })
+      .catch(() => { if (!cancelled) setObservedEngines([]); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const activeEngines = (observedEngines && observedEngines.length > 0)
+    ? observedEngines
+    : ALL_ENGINES;
+  const isFallback = !observedEngines || observedEngines.length === 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -334,7 +355,7 @@ export default function EngineComparison() {
     return () => { cancelled = true; };
   }, [window, minEngines]);
 
-  const engineCards = stats?.engines || [];
+  const engineCards = (stats?.engines || []).filter((e) => activeEngines.includes(e.ids_source));
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -346,8 +367,23 @@ export default function EngineComparison() {
             Engine Comparison
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Compare what Suricata, Zeek, Snort, and Kismet are detecting — and where they agree.
+            Compare what your IDS engines are detecting — and where they agree.
           </p>
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] uppercase tracking-wider text-slate-500">Ingesting:</span>
+            {isFallback ? (
+              <span className="text-xs text-slate-500 italic">
+                No alerts observed in the last 30 days — showing all supported engines.
+              </span>
+            ) : (
+              <>
+                {activeEngines.map((e) => (
+                  <EnginePill key={e} engine={e} active />
+                ))}
+                <span className="text-[11px] text-slate-600">({activeEngines.length} of {ALL_ENGINES.length})</span>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -376,17 +412,16 @@ export default function EngineComparison() {
 
       {/* Engine cards */}
       <section className="mb-6">
-        {loadingStats ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-40 rounded-xl border border-white/[0.06] bg-white/[0.02] animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {engineCards.map((e) => <EngineCard key={e.ids_source} engine={e} />)}
-          </div>
-        )}
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
+        >
+          {loadingStats
+            ? activeEngines.map((e) => (
+                <div key={e} className="h-40 rounded-xl border border-white/[0.06] bg-white/[0.02] animate-pulse" />
+              ))
+            : engineCards.map((e) => <EngineCard key={e.ids_source} engine={e} />)}
+        </div>
       </section>
 
       {/* Consensus table */}
@@ -418,7 +453,7 @@ export default function EngineComparison() {
           </div>
         </div>
 
-        <ConsensusTable data={consensus?.results} loading={loadingConsensus} />
+        <ConsensusTable data={consensus?.results} loading={loadingConsensus} activeEngines={activeEngines} />
       </section>
 
       {/* Overlap matrix + Unique coverage */}
@@ -428,7 +463,7 @@ export default function EngineComparison() {
           <p className="text-xs text-slate-500 mb-4">
             How often do the engines flag the same source IPs?
           </p>
-          <OverlapMatrix data={overlap} loading={loadingOverlap} />
+          <OverlapMatrix data={overlap} loading={loadingOverlap} activeEngines={activeEngines} />
         </section>
 
         <section className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
@@ -439,7 +474,7 @@ export default function EngineComparison() {
           <p className="text-xs text-slate-500 mb-4">
             Source IPs only one engine caught — unique coverage, but also likely false-positive source.
           </p>
-          <UniqueCoverage data={unique} loading={loadingUnique} />
+          <UniqueCoverage data={unique} loading={loadingUnique} activeEngines={activeEngines} />
         </section>
       </div>
     </div>

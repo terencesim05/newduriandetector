@@ -168,6 +168,12 @@ export const alertService = {
     return response.data;
   },
   // Engine comparison
+  async getEnginesInUse(lookbackDays = 30) {
+    const response = await logApi.get('/api/analytics/engines-in-use', {
+      params: { lookback_days: lookbackDays },
+    });
+    return response.data;
+  },
   async getEngineStats(window = '1h') {
     const response = await logApi.get('/api/analytics/engine-stats', { params: { window } });
     return response.data;

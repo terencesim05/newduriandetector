@@ -349,7 +349,7 @@ export default function Alerts() {
         // Skip duplicates or errors
       }
     }
-    setAlerts((prev) => prev.map((a) => a.severity === 'CRITICAL' && uniqueIPs.includes(a.source_ip) ? { ...a, is_blocked: true } : a));
+    setAlerts((prev) => prev.map((a) => uniqueIPs.includes(a.source_ip) ? { ...a, is_blocked: true, is_whitelisted: false } : a));
     toast.success(`Flagged ${blocked} critical IP${blocked !== 1 ? 's' : ''}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(239,68,68,0.3)' } });
   };
 
@@ -614,7 +614,7 @@ export default function Alerts() {
                               onClick={async () => {
                                 try {
                                   await alertService.addToBlacklist({ entry_type: 'IP', value: alert.source_ip, reason: `Flagged from alert ${alert.category}` });
-                                  setAlerts((prev) => prev.map((a) => a.id === alert.id ? { ...a, is_blocked: true } : a));
+                                  setAlerts((prev) => prev.map((a) => a.source_ip === alert.source_ip ? { ...a, is_blocked: true, is_whitelisted: false } : a));
                                   toast.success(`Flagged ${alert.source_ip}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(239,68,68,0.3)' } });
                                 } catch (err) {
                                   toast.error(err.response?.data?.detail || 'Failed to flag IP', { style: { background: '#1e1e2e', color: '#fff' } });
@@ -629,7 +629,7 @@ export default function Alerts() {
                               onClick={async () => {
                                 try {
                                   await alertService.addToWhitelist({ entry_type: 'IP', value: alert.source_ip, reason: `Trusted from alerts page` });
-                                  setAlerts((prev) => prev.map((a) => a.id === alert.id ? { ...a, is_whitelisted: true } : a));
+                                  setAlerts((prev) => prev.map((a) => a.source_ip === alert.source_ip ? { ...a, is_whitelisted: true, is_blocked: false } : a));
                                   toast.success(`Trusted ${alert.source_ip}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(16,185,129,0.3)' } });
                                 } catch (err) {
                                   toast.error(err.response?.data?.detail || 'Failed to trust IP', { style: { background: '#1e1e2e', color: '#fff' } });
