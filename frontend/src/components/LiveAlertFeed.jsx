@@ -29,16 +29,12 @@ function timeAgo(dateStr) {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-export default function LiveAlertFeed({ alerts, connected, onDismiss, onDismissAll }) {
+export default function LiveAlertFeed({ alerts, connected, onDismiss, onDismissAll, onFlagIp, onTrustIp }) {
   const { user } = useAuth();
   const listRef = useRef(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [assigningId, setAssigningId] = useState(null);
   const [assignedAlerts, setAssignedAlerts] = useState({});
-  // Session-local caches so newly-arriving alerts via SSE also hide the buttons
-  // for IPs the user just actioned — the DB is already updated backend-side.
-  const [flaggedIps, setFlaggedIps] = useState(() => new Set());
-  const [trustedIps, setTrustedIps] = useState(() => new Set());
 
   const isTeamLeader = user?.is_team_leader && user?.team_id;
 
@@ -75,9 +71,8 @@ export default function LiveAlertFeed({ alerts, connected, onDismiss, onDismissA
   const handleBlock = async (alert) => {
     try {
       await alertService.addToBlacklist({ entry_type: 'IP', value: alert.source_ip, reason: `Flagged from live feed — ${alert.category}` });
-      setFlaggedIps((prev) => new Set(prev).add(alert.source_ip));
+      if (onFlagIp) onFlagIp(alert.source_ip);
       toast.success(`Flagged ${alert.source_ip}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(239,68,68,0.3)' } });
-      if (onDismiss) onDismiss(alert.id);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to flag IP', { style: { background: '#1e1e2e', color: '#fff' } });
     }
@@ -86,16 +81,12 @@ export default function LiveAlertFeed({ alerts, connected, onDismiss, onDismissA
   const handleTrust = async (alert) => {
     try {
       await alertService.addToWhitelist({ entry_type: 'IP', value: alert.source_ip, reason: `Trusted from live feed` });
-      setTrustedIps((prev) => new Set(prev).add(alert.source_ip));
+      if (onTrustIp) onTrustIp(alert.source_ip);
       toast.success(`Trusted ${alert.source_ip}`, { style: { background: '#1e1e2e', color: '#fff', border: '1px solid rgba(16,185,129,0.3)' } });
-      if (onDismiss) onDismiss(alert.id);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to trust IP', { style: { background: '#1e1e2e', color: '#fff' } });
     }
   };
-
-  const isIpFlagged = (alert) => alert.is_blocked || flaggedIps.has(alert.source_ip);
-  const isIpTrusted = (alert) => alert.is_whitelisted || trustedIps.has(alert.source_ip);
 
   return (
     <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl overflow-hidden">
@@ -195,12 +186,12 @@ export default function LiveAlertFeed({ alerts, connected, onDismiss, onDismissA
 
                 {/* Action buttons — hidden once the IP is flagged or trusted */}
                 <div className="flex items-center gap-2 mt-2 ml-5 pl-3">
-                  {isIpFlagged(alert) ? (
+                  {alert.is_blocked ? (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium">
                       <ShieldBan className="w-3.5 h-3.5" />
                       Flagged
                     </span>
-                  ) : isIpTrusted(alert) ? (
+                  ) : alert.is_whitelisted ? (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
                       <ShieldCheck className="w-3.5 h-3.5" />
                       Trusted

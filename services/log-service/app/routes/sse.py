@@ -49,6 +49,7 @@ def _serialize_alert(alert) -> dict:
         'ids_source': alert.ids_source.value if alert.ids_source else None,
         'flagged_by_threatfox': alert.flagged_by_threatfox,
         'is_blocked': alert.is_blocked,
+        'is_whitelisted': alert.is_whitelisted,
         'quarantine_status': alert.quarantine_status.value if alert.quarantine_status else None,
         'ml_confidence': alert.ml_confidence,
         'geo_country': alert.geo_country,

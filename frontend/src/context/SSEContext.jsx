@@ -97,6 +97,7 @@ export function SSEProvider({ children }) {
         ids_source: a.ids_source,
         flagged_by_threatfox: a.flagged_by_threatfox,
         is_blocked: a.is_blocked,
+        is_whitelisted: a.is_whitelisted,
         quarantine_status: a.quarantine_status,
         ml_confidence: a.ml_confidence,
         geo_country: a.geo_country,
@@ -141,6 +142,23 @@ export function SSEProvider({ children }) {
     }
   }, []);
 
+  // Mirror the backend's cascade: one flag/trust action should update every
+  // in-memory alert with the same source_ip, so sibling rows immediately reflect
+  // the new state without waiting for a refresh.
+  const markIpFlagged = useCallback((ip) => {
+    if (!ip) return;
+    setAlerts((prev) => prev.map((a) =>
+      a.source_ip === ip ? { ...a, is_blocked: true, is_whitelisted: false } : a
+    ));
+  }, []);
+
+  const markIpTrusted = useCallback((ip) => {
+    if (!ip) return;
+    setAlerts((prev) => prev.map((a) =>
+      a.source_ip === ip ? { ...a, is_whitelisted: true, is_blocked: false } : a
+    ));
+  }, []);
+
   const dismissAllAlerts = useCallback(() => {
     setAlerts([]);
     const token = localStorage.getItem('accessToken');
@@ -153,7 +171,7 @@ export function SSEProvider({ children }) {
 
   return (
     <SSEContext.Provider
-      value={{ alerts, stats, connected, error, reconnect: connect, dismissAlert, dismissAllAlerts }}
+      value={{ alerts, stats, connected, error, reconnect: connect, dismissAlert, dismissAllAlerts, markIpFlagged, markIpTrusted }}
     >
       {children}
     </SSEContext.Provider>

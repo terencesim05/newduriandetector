@@ -41,7 +41,7 @@ export default function Dashboard() {
   const [myAlerts, setMyAlerts] = useState([]);
   const [watcherDismissed, setWatcherDismissed] = useState(() => localStorage.getItem('watcher_nudge_dismissed') === 'true');
   const [hasApiKeys, setHasApiKeys] = useState(null);
-  const { alerts: liveAlerts, stats: liveStats, connected, error, reconnect, dismissAlert, dismissAllAlerts } = useSSE();
+  const { alerts: liveAlerts, stats: liveStats, connected, error, reconnect, dismissAlert, dismissAllAlerts, markIpFlagged, markIpTrusted } = useSSE();
 
   // Notifications for new alerts
   useAlertNotifications(liveAlerts);
@@ -146,7 +146,14 @@ export default function Dashboard() {
       </div>
 
       {/* Live Alert Feed */}
-      <LiveAlertFeed alerts={liveAlerts} connected={connected} onDismiss={dismissAlert} onDismissAll={dismissAllAlerts} />
+      <LiveAlertFeed
+        alerts={liveAlerts}
+        connected={connected}
+        onDismiss={dismissAlert}
+        onDismissAll={dismissAllAlerts}
+        onFlagIp={markIpFlagged}
+        onTrustIp={markIpTrusted}
+      />
 
       {/* DurianBot widget */}
       <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 hover:border-blue-500/20 transition-all">
