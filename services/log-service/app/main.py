@@ -13,6 +13,7 @@ from app.routes.rules import router as rules_router
 from app.routes.team import router as team_router
 from app.routes.ml_config import router as ml_config_router
 from app.routes.analytics import router as analytics_router
+from app.routes.engine_comparison import router as engine_comparison_router
 from app.routes.admin import router as admin_router
 from app.routes.sse import router as sse_router
 from app.routes.upload import router as upload_router
@@ -60,6 +61,7 @@ app.include_router(rules_router)
 app.include_router(team_router)
 app.include_router(ml_config_router)
 app.include_router(analytics_router)
+app.include_router(engine_comparison_router)
 app.include_router(admin_router)
 app.include_router(sse_router)
 app.include_router(upload_router)

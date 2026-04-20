@@ -16,6 +16,7 @@ import {
   Workflow,
   BrainCircuit,
   BarChart3,
+  GitCompare,
   Globe,
   FileUp,
   ChevronDown,
@@ -43,6 +44,7 @@ const navSections = [
     items: [
       { to: '/threat-intel', label: 'Threat Intel', icon: ShieldAlert },
       { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+      { to: '/engine-comparison', label: 'Engine Comparison', icon: GitCompare },
       { to: '/attack-globe', label: 'GeoIP Map', icon: Globe },
     ],
   },

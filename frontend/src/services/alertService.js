@@ -167,6 +167,26 @@ export const alertService = {
     const response = await logApi.get('/api/analytics/severity-trends', { params });
     return response.data;
   },
+  // Engine comparison
+  async getEngineStats(window = '1h') {
+    const response = await logApi.get('/api/analytics/engine-stats', { params: { window } });
+    return response.data;
+  },
+  async getEngineConsensus({ window = '1h', minEngines = 2, limit = 100 } = {}) {
+    const response = await logApi.get('/api/analytics/engine-consensus', {
+      params: { window, min_engines: minEngines, limit },
+    });
+    return response.data;
+  },
+  async getEngineOverlap(window = '1h') {
+    const response = await logApi.get('/api/analytics/engine-overlap', { params: { window } });
+    return response.data;
+  },
+  async getEngineUnique(window = '1h') {
+    const response = await logApi.get('/api/analytics/engine-unique', { params: { window } });
+    return response.data;
+  },
+
   async exportAnalyticsPDF({ startDate, endDate, severity, category, days } = {}) {
     const params = {};
     if (startDate) params.start_date = startDate;

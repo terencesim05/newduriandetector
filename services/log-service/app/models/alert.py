@@ -1,7 +1,7 @@
 import uuid
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Float, Integer, BigInteger, Boolean, DateTime, Enum, Text
+from sqlalchemy import Column, String, Float, Integer, BigInteger, Boolean, DateTime, Enum, Text, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.database import Base
 
@@ -73,6 +73,11 @@ class Alert(Base):
     geo_longitude = Column(Float, nullable=True)
     geo_country = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        Index("ix_alerts_source_ip_detected_at", "source_ip", "detected_at"),
+        Index("ix_alerts_ids_source_detected_at", "ids_source", "detected_at"),
+    )
 
 
 class DismissedAlert(Base):

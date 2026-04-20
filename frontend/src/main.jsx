@@ -25,6 +25,7 @@ import Rules from './pages/Rules.jsx'
 import MLConfig from './pages/MLConfig.jsx'
 import IngestionLogs from './pages/IngestionLogs.jsx'
 import Analytics from './pages/Analytics.jsx'
+import EngineComparison from './pages/EngineComparison.jsx'
 import GeoMap from './pages/GeoMap.jsx'
 import Chatbot from './pages/Chatbot.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
@@ -56,6 +57,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="/ml-config" element={<DashboardLayout><MLConfig /></DashboardLayout>} />
           <Route path="/ingestion-logs" element={<DashboardLayout><IngestionLogs /></DashboardLayout>} />
           <Route path="/analytics" element={<DashboardLayout><Analytics /></DashboardLayout>} />
+          <Route path="/engine-comparison" element={<DashboardLayout><EngineComparison /></DashboardLayout>} />
           <Route path="/attack-globe" element={<DashboardLayout><GeoMap /></DashboardLayout>} />
           <Route path="/chatbot" element={<DashboardLayout><Chatbot /></DashboardLayout>} />
           <Route path="/teams" element={<DashboardLayout><Teams /></DashboardLayout>} />
