@@ -435,9 +435,12 @@ async def chat(
                 except json.JSONDecodeError:
                     fn_args = {}
 
+                WRITE_TOOLS = {"block_ip", "trust_ip", "create_incident", "block_all_quarantined"}
                 executor = TOOL_EXECUTORS.get(fn_name)
                 if not executor:
                     result = f"Unknown tool: {fn_name}"
+                elif fn_name in WRITE_TOOLS and user.tier.upper() == "FREE":
+                    result = "This action requires a Premium or Exclusive plan. Let the user know they need to upgrade to use this feature."
                 else:
                     result = await executor(user, db, fn_args)
                     action_taken = fn_name

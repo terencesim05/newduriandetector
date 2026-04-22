@@ -162,7 +162,7 @@ export default function Sidebar({ open, onClose }) {
             />
           ))}
 
-          {/* DurianBot — standalone */}
+          {/* DurianBot — all tiers */}
           <div className="pt-2 mt-2 border-t border-white/[0.06]">
             <NavLink
               to="/chatbot"

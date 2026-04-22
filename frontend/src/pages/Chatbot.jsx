@@ -85,10 +85,6 @@ export default function Chatbot() {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Free tier: limit to 5 messages per session
-  const userMessageCount = messages.filter((m) => m.role === 'user').length;
-  const freeLimit = 5;
-  const atLimit = isFree && userMessageCount >= freeLimit;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -102,7 +98,7 @@ export default function Chatbot() {
 
   const handleSend = async () => {
     const msg = input.trim();
-    if (!msg || loading || atLimit) return;
+    if (!msg || loading) return;
 
     setInput('');
     setError('');
@@ -160,10 +156,9 @@ export default function Chatbot() {
         <div>
           <h1 className="text-lg font-semibold text-white flex items-center gap-2">
             DurianBot
-            {isFree && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-slate-500/20">Basic</span>
-            )}
-            {!isFree && (
+            {isFree ? (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-slate-500/20">Read-only</span>
+            ) : (
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20">
                 <Sparkles className="w-3 h-3 inline mr-0.5" />Pro
               </span>
@@ -228,7 +223,7 @@ export default function Chatbot() {
         )}
 
         {/* Suggestions (only show if no user messages yet) */}
-        {userMessageCount === 0 && !loading && (
+        {messages.filter((m) => m.role === 'user').length === 0 && !loading && (
           <div className="flex flex-wrap gap-2 mt-2">
             {suggestions.map((s) => (
               <button key={s} onClick={() => { setInput(s); inputRef.current?.focus(); }}
@@ -242,18 +237,6 @@ export default function Chatbot() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Free tier limit warning */}
-      {isFree && userMessageCount >= 3 && !atLimit && (
-        <div className="text-xs text-slate-500 text-center py-1">
-          {freeLimit - userMessageCount} message{freeLimit - userMessageCount !== 1 ? 's' : ''} remaining on Basic plan
-        </div>
-      )}
-      {atLimit && (
-        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-4 py-3 text-sm text-yellow-400 text-center mb-2">
-          You've reached the Basic plan limit ({freeLimit} messages/session). Upgrade to Premium for unlimited access.
-        </div>
-      )}
-
       {/* Input */}
       <div className="flex items-end gap-2 pt-2 border-t border-white/[0.06]">
         <textarea
@@ -261,8 +244,8 @@ export default function Chatbot() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={atLimit ? 'Message limit reached' : 'Ask DurianBot about your security data...'}
-          disabled={loading || atLimit}
+          placeholder="Ask DurianBot about your security data..."
+          disabled={loading}
           rows={1}
           className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20 transition-all resize-none disabled:opacity-50"
           style={{ minHeight: '44px', maxHeight: '120px' }}
@@ -270,7 +253,7 @@ export default function Chatbot() {
         />
         <button
           onClick={handleSend}
-          disabled={loading || !input.trim() || atLimit}
+          disabled={loading || !input.trim()}
           className="bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-all shadow-lg shadow-blue-600/20 cursor-pointer shrink-0"
         >
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}

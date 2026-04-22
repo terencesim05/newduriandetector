@@ -68,9 +68,29 @@ newduriandetector/
 | Unlimited alerts | - | Yes | Yes |
 | GeoIP attack map | Yes | Yes | Yes |
 | Team workspace | - | - | Yes (1 leader + 4 members) |
-| AI-driven analysis | - | - | Yes |
+| AI-driven analysis (DurianBot) | Read-only | Yes | Yes |
 | Custom alert rules | - | - | Yes |
 | Dedicated support | - | - | Yes |
+
+### Upgrade Drivers
+
+**Free → Premium** unlocks:
+- Full alert history with date range filtering (Free users see limited recent alerts)
+- Quarantine management — release false positives or confirm and block threats
+- Blacklist and whitelist management
+- Full analytics dashboard (time series, category distribution, top sources, severity trends, PDF export)
+- Custom detection rules (rate limit, category match, failed login triggers)
+- ML configuration — choose model, tune sensitivity and score boost
+- Incident management — create, track, and resolve security investigations
+- Ingestion log uploads — upload and analyse IDS log files offline
+- DurianBot full access — read and write tools (block IPs, trust IPs, create incidents)
+
+**Premium → Exclusive** unlocks:
+- Shared team workspace — up to 1 leader + 4 members on one account
+- Alert assignment — assign alerts to specific team members for investigation
+- Team activity feed — see who did what across the team
+- Per-member alert stats — track workload distribution
+- Shared blacklist, whitelist, and quarantine — one member's action applies to the whole team
 
 ### Team Collaboration (Exclusive Only)
 
@@ -196,8 +216,8 @@ Investigation reports that group related alerts together. Alerts are automated s
 AI-powered chatbot built on Groq (`llama-3.3-70b-versatile`) with function calling. DurianBot can answer questions about your security data and take actions directly from the chat.
 
 **Tier access:**
-- **Free**: 5 messages per session (DurianBot Basic)
-- **Premium / Exclusive**: Unlimited messages
+- **Free**: Read-only — can query alerts, stats, blacklist, whitelist. Write tools (block IP, trust IP, create incident, mass block) are blocked server-side with an upgrade prompt from the bot.
+- **Premium / Exclusive**: Full access — all read and write tools, unlimited messages
 
 **Tools & Capabilities:**
 
