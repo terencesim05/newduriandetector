@@ -268,7 +268,6 @@ Separate admin interface for platform management. Admins are identified by Djang
 - **User Management**: searchable, filterable, paginated user table (50/page). Per-user actions: View Details, Suspend/Unsuspend, Change Tier, Reset Password — all behind confirmation modals. Superuser accounts hidden from the list
 - **Team Management**: list all teams with member count, PIN (copy button), creation date. Expandable rows showing members with roles (Leader/Member). Actions: delete team, remove member
 - **Subscription Management**: revenue calculated from user tiers (Premium x $49, Exclusive counted per team x $199). Revenue breakdown cards, ongoing subscriptions table showing type (User/Team), plan, price, status
-- **System Monitoring**: database and FastAPI health checks with status indicators. Alert metrics (total, today, this week, blocked, quarantined). Team activity log table
 - **Audit Logs**: full audit trail with timestamp, action, user, details, IP address. Filterable by action type (login, suspend, tier change, password reset, etc.) and "My Actions Only" toggle
 - **Admin Sidebar**: red-themed navigation separate from user sidebar
 
@@ -582,9 +581,6 @@ The Threat Intel page shows a live feed of the latest IOCs (Indicators of Compro
 | GET | `/api/analytics/top-sources` | Top N source IPs by alert count |
 | GET | `/api/analytics/severity-trends` | Severity breakdown over time |
 | GET | `/api/analytics/geo-map` | Alert locations grouped by lat/lon/country |
-| GET | `/api/admin/system-health` | Database + FastAPI health check (admin only) |
-| GET | `/api/admin/alert-stats` | Global alert stats — total, today, week, blocked, quarantined (admin only) |
-| GET | `/api/admin/activity-log` | Global team activity log (admin only) |
 | GET | `/api/sse/alerts?token=JWT` | SSE stream — pushes new alerts + stats updates (authenticated via query param) |
 | POST | `/api/upload` | Upload IDS log file for processing (stores in ingestion_logs) |
 | GET | `/api/ingestion-logs` | List processed ingestion logs (filterable, paginated) |

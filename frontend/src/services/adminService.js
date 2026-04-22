@@ -93,21 +93,4 @@ export const adminService = {
     return response.data;
   },
 
-  // System health (log service)
-  async getSystemHealth() {
-    const response = await logApi.get('/api/admin/system-health');
-    return response.data;
-  },
-
-  // Alert stats (log service)
-  async getAlertStats() {
-    const response = await logApi.get('/api/admin/alert-stats');
-    return response.data;
-  },
-
-  // Activity log (log service)
-  async getActivityLog(limit = 100) {
-    const response = await logApi.get(`/api/admin/activity-log?limit=${limit}`);
-    return response.data;
-  },
 };

@@ -31,7 +31,6 @@ import Chatbot from './pages/Chatbot.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import UserManagement from './pages/admin/UserManagement.jsx'
 import SubscriptionManagement from './pages/admin/SubscriptionManagement.jsx'
-import SystemMonitoring from './pages/admin/SystemMonitoring.jsx'
 import AuditLogs from './pages/admin/AuditLogs.jsx'
 import TeamManagement from './pages/admin/TeamManagement.jsx'
 
@@ -67,7 +66,6 @@ createRoot(document.getElementById('root')).render(
           <Route path="/admin/users" element={<AdminLayout><UserManagement /></AdminLayout>} />
           <Route path="/admin/teams" element={<AdminLayout><TeamManagement /></AdminLayout>} />
           <Route path="/admin/subscriptions" element={<AdminLayout><SubscriptionManagement /></AdminLayout>} />
-          <Route path="/admin/system" element={<AdminLayout><SystemMonitoring /></AdminLayout>} />
           <Route path="/admin/audit" element={<AdminLayout><AuditLogs /></AdminLayout>} />
         </Routes>
         <Toaster />

@@ -17,7 +17,6 @@ const navItems = [
   { to: '/admin/users', label: 'User Management', icon: Users },
   { to: '/admin/teams', label: 'Team Management', icon: UsersRound },
   { to: '/admin/subscriptions', label: 'Subscriptions', icon: CreditCard },
-  { to: '/admin/system', label: 'System Monitoring', icon: Activity },
   { to: '/admin/audit', label: 'Audit Logs', icon: FileText },
 ];
 
