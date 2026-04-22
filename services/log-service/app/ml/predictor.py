@@ -37,6 +37,12 @@ _CATEGORY_ENC = {
     "COMMAND_INJECTION": 10,
 }
 
+# Protocol encoding: TCP=1, UDP=2, ICMP=3, OTHER/None=0
+_PROTOCOL_ENC = {"TCP": 1, "UDP": 2, "ICMP": 3}
+
+# IDS source encoding
+_IDS_SOURCE_ENC = {"suricata": 1, "zeek": 2, "snort": 3, "kismet": 4}
+
 # Cache: model_type -> loaded model
 _models: dict = {}
 
@@ -65,8 +71,11 @@ def _load_model(model_type: str = "random_forest"):
     return model
 
 
-def predict_threat(severity: str, category: str, alert_count_last_hour: int = 1,
+def predict_threat(severity: str, category: str,
                    source_port: int = 0, destination_port: int = 0,
+                   protocol: str | None = None,
+                   flagged_by_threatfox: str = "false",
+                   ids_source: str | None = None,
                    model_type: str = "random_forest") -> dict | None:
     """
     Predict whether an alert is a threat.
@@ -76,12 +85,17 @@ def predict_threat(severity: str, category: str, alert_count_last_hour: int = 1,
     if model is None:
         return None
 
+    proto_key = (protocol or "").upper()
+    ids_key = (ids_source or "").lower()
+
     features = [[
         _SEVERITY_ENC.get(severity, 2),
         _CATEGORY_ENC.get(category, 1),
-        alert_count_last_hour,
         source_port or 0,
         destination_port or 0,
+        _PROTOCOL_ENC.get(proto_key, 0),
+        1 if str(flagged_by_threatfox).lower() == "true" else 0,
+        _IDS_SOURCE_ENC.get(ids_key, 0),
     ]]
 
     if model_type == "isolation_forest":

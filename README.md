@@ -360,11 +360,36 @@ Three ML models predict whether each alert is malicious, adding an ML confidence
 | **Isolation Forest** | Unsupervised | Trained on benign data only — detects anomalies by measuring how easily a sample is isolated, good for zero-day threats |
 | **Neural Network** | Supervised | Multi-layer perceptron (64→32 neurons) — learns non-linear feature relationships for advanced detection |
 
+**Feature Schema (7 features):**
+
+| Feature | Encoding |
+|---------|----------|
+| `severity` | LOW=1, MEDIUM=2, HIGH=3, CRITICAL=4 |
+| `category` | OTHER=1 … SQL_INJECTION/COMMAND_INJECTION=10 |
+| `source_port` | raw integer, 0 if absent |
+| `destination_port` | raw integer, 0 if absent |
+| `protocol` | TCP=1, UDP=2, ICMP=3, OTHER/None=0 |
+| `flagged_by_threatfox` | true=1, anything else=0 |
+| `ids_source` | suricata=1, zeek=2, snort=3, kismet=4 |
+
 **Pipeline:**
-1. **Training data**: 1000 synthetic alerts (500 benign, 500 malicious) with 5 features — severity (encoded 1–4), category (encoded 1–10), alert_count_last_hour, source_port, destination_port
+1. **Training data**: 1000 synthetic alerts (500 benign, 500 malicious) generated with the 7 features above — benign samples favour TCP/UDP, low threatfox flags, low-risk categories; malicious samples favour higher threatfox flags and high-risk categories
 2. **Training**: supervised models (Random Forest, Neural Network) train on 80/20 split; Isolation Forest trains on benign samples only and learns to flag outliers
 3. **Prediction**: on every ingested alert (unless whitelisted), the selected model returns a confidence score (0.0–1.0) representing the probability it's malicious
 4. **Score enhancement**: if ML confidence exceeds the user's sensitivity threshold (default 0.8), threat_score is boosted (default +0.2) — this can push alerts over the quarantine (0.7) or auto-block (0.9) threshold
+
+**Retraining:**
+```bash
+cd services/log-service
+python -m app.ml.train_model
+```
+
+**Limitations:**
+- **Synthetic training data** — all 1000 samples are procedurally generated with rule-based labels. The models have never seen real network traffic. Accuracy figures (Random Forest: 100%, Isolation Forest: 79%) reflect synthetic patterns, not real-world performance.
+- **Neural network is unreliable** — MLP accuracy is ~49.5% (majority-class prediction). The feature set spans vastly different scales (severity 1–4 vs ports 0–65535). Without `StandardScaler` normalisation applied at both training and inference time, gradient descent ignores small-scale features and the model defaults to predicting the majority class. Use Random Forest or Isolation Forest instead.
+- **Small dataset** — 1000 samples is insufficient for generalisation. A production system would require thousands of labelled real alerts.
+- **Binary output only** — models predict threat / not-threat. Attack type classification is handled separately by the rule-based category normaliser.
+- **No automated retraining** — models are static after training. New attack patterns introduced post-training are not detected unless models are manually retrained.
 
 | ML Confidence | Badge Color | Meaning |
 |---------------|-------------|---------|
@@ -820,7 +845,7 @@ Each config uses a different API key, so alerts are routed to the correct client
 
 ### April 2 — ML Threat Detection
 - Built machine learning threat detection pipeline with 3 selectable models: Random Forest (supervised), Isolation Forest (unsupervised anomaly detection), Neural Network (MLP)
-- Created synthetic training data generator (`app/ml/generate_training_data.py`) — 1000 samples (500 benign, 500 malicious) with encoded severity, category, alert count, and port features
+- Created synthetic training data generator (`app/ml/generate_training_data.py`) — 1000 samples (500 benign, 500 malicious) with 7 features: severity, category, source_port, destination_port, protocol, flagged_by_threatfox, ids_source
 - Training script (`app/ml/train_model.py`) — trains all 3 models in one run; supervised models use 80/20 split, Isolation Forest trains on benign data only to learn normal patterns
 - Prediction module (`app/ml/predictor.py`) — loads models by name with caching, handles both `predict_proba` (supervised) and `score_samples` (Isolation Forest) APIs
 - Integrated ML prediction into alert ingestion pipeline — every non-whitelisted alert gets an `ml_confidence` score (0.0–1.0)

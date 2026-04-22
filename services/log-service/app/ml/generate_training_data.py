@@ -37,6 +37,12 @@ MALICIOUS_CATEGORIES = [
     "BRUTE_FORCE", "PRIVILEGE_ESCALATION", "DATA_EXFILTRATION", "XSS",
 ]
 
+# Protocol encoding: TCP=1, UDP=2, ICMP=3, OTHER/None=0
+PROTOCOL_MAP = {"TCP": 1, "UDP": 2, "ICMP": 3}
+
+# IDS source encoding
+IDS_SOURCE_MAP = {"suricata": 1, "zeek": 2, "snort": 3, "kismet": 4}
+
 
 def generate_benign():
     severity = random.choice(BENIGN_SEVERITIES)
@@ -44,9 +50,11 @@ def generate_benign():
     return {
         "severity": SEVERITY_MAP[severity],
         "category": CATEGORY_MAP[category],
-        "alert_count_last_hour": random.randint(1, 5),
         "source_port": random.randint(1024, 65535),
         "destination_port": random.choice([80, 443, 8080, 8443, 22]),
+        "protocol": random.choices([1, 2, 0], weights=[70, 25, 5])[0],
+        "flagged_by_threatfox": random.choices([0, 1], weights=[95, 5])[0],
+        "ids_source": random.randint(1, 4),
         "is_threat": 0,
     }
 
@@ -57,15 +65,19 @@ def generate_malicious():
     return {
         "severity": SEVERITY_MAP[severity],
         "category": CATEGORY_MAP[category],
-        "alert_count_last_hour": random.randint(10, 100),
         "source_port": random.randint(1024, 65535),
         "destination_port": random.choice([80, 443, 22, 3389, 445, 1433, 3306]),
+        "protocol": random.choices([1, 2, 3, 0], weights=[50, 25, 15, 10])[0],
+        "flagged_by_threatfox": random.choices([0, 1], weights=[40, 60])[0],
+        "ids_source": random.randint(1, 4),
         "is_threat": 1,
     }
 
 
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    if os.path.exists(OUTPUT_PATH):
+        os.remove(OUTPUT_PATH)
     random.seed(42)
 
     rows = []
@@ -75,7 +87,7 @@ def main():
         rows.append(generate_malicious())
     random.shuffle(rows)
 
-    fieldnames = ["severity", "category", "alert_count_last_hour", "source_port", "destination_port", "is_threat"]
+    fieldnames = ["severity", "category", "source_port", "destination_port", "protocol", "flagged_by_threatfox", "ids_source", "is_threat"]
     with open(OUTPUT_PATH, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()

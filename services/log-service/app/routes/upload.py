@@ -291,9 +291,11 @@ async def upload_ids_log(
             prediction = predict_threat(
                 severity=alert.severity.value if hasattr(alert.severity, 'value') else alert.severity,
                 category=alert.category.value if hasattr(alert.category, 'value') else alert.category,
-                alert_count_last_hour=1,
                 source_port=alert.source_port or 0,
                 destination_port=alert.destination_port or 0,
+                protocol=alert.protocol,
+                flagged_by_threatfox=alert.flagged_by_threatfox,
+                ids_source=alert.ids_source.value if hasattr(alert.ids_source, 'value') else alert.ids_source,
                 model_type=ml_model_type,
             )
             if prediction:
