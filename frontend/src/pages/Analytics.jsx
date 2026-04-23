@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  BarChart3, Loader2, Download, Image, RotateCcw,
+  BarChart3, Loader2, Download, Image, RotateCcw, Lock,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -9,6 +9,7 @@ import {
 import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 import { alertService } from '../services/alertService';
+import { useAuth } from '../context/AuthContext';
 
 // ── Color palettes ──
 const PALETTES = {
@@ -205,6 +206,8 @@ function ChartCard({ title, subtitle, chartRef, children }) {
 
 // ── Main Analytics page ──
 export default function Analytics() {
+  const { user } = useAuth();
+  const isFree = user?.tier?.toUpperCase() === 'FREE';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -357,8 +360,8 @@ export default function Analytics() {
           <h1 className="text-2xl font-bold text-white">Analytics</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={exportPDF} disabled={exporting || loading} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/[0.08] text-sm text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Download all charts as a PDF report">
-            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          <button onClick={isFree ? undefined : exportPDF} disabled={exporting || loading || isFree} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/[0.08] text-sm text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title={isFree ? 'PDF export is a Premium feature' : 'Download all charts as a PDF report'}>
+            {isFree ? <Lock className="w-4 h-4" /> : exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             {exporting ? 'Generating...' : 'Download PDF'}
           </button>
           <button onClick={handleApplyAll} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-sm text-white font-medium hover:bg-blue-500 transition-colors cursor-pointer" title="Reload all charts with current filters">

@@ -312,10 +312,12 @@ function App() {
               <ul className="mt-8 space-y-3">
                 {[
                   'Real-time alert monitoring',
-                  'Basic SOC dashboard',
-                  'Up to 100 alerts/day',
-                  'Community support',
-                  'AI Chatbot(DurianBot Basic)',
+                  'SOC dashboard & analytics',
+                  'Alerts, Quarantine & Threat Intel',
+                  'GeoIP attack map',
+                  'Rules, Blacklist & Whitelist',
+                  'Incident management',
+                  'AI Chatbot (read-only)',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-sm text-slate-300">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-4 mt-0.5 text-slate-500 shrink-0">
@@ -347,12 +349,13 @@ function App() {
               <ul className="mt-8 space-y-3">
                 {[
                   'Everything in Free, plus:',
+                  'Ingestion Logs & file upload',
+                  'Engine Comparison',
                   'ML model configurations',
-                  'Incident management',
-                  'PDF report generation',
                   'Unlimited alerts',
-                  'Email Notifications',
-                  'AI Chatbot(DurianBot)',
+                  'Email notifications',
+                  'PDF report generation',
+                  'AI Chatbot (full)',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-sm text-slate-300">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-4 mt-0.5 text-blue-400 shrink-0">
@@ -380,11 +383,7 @@ function App() {
               <ul className="mt-8 space-y-3">
                 {[
                   'Everything in Premium, plus:',
-                  'GeoIP attack map',
-                  'AI-driven analysis',
                   'Team workspace (5 members)',
-                  'Custom alert rules',
-                  'Advanced reporting & export',
                   'Dedicated support',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-sm text-slate-300">

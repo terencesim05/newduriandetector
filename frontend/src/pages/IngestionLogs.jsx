@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Navigate } from 'react-router-dom';
 import {
   Upload, FileText, CheckCircle, AlertCircle, Loader2, X, Info,
   ChevronLeft, ChevronRight, Search, ShieldBan, ShieldCheck, ShieldQuestion,
@@ -6,6 +7,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ingestionService } from '../services/ingestionService';
+import { useAuth } from '../context/AuthContext';
 
 const IDS_SOURCES = [
   { id: 'suricata', name: 'Suricata', color: 'orange', formats: 'EVE JSON (.json)', description: 'One JSON object per line with event_type "alert"' },
@@ -130,6 +132,9 @@ function LogDetailModal({ log, onClose }) {
 }
 
 export default function IngestionLogs() {
+  const { user } = useAuth();
+  if (user?.tier?.toUpperCase() === 'FREE') return <Navigate to="/dashboard" replace />;
+
   // Upload state
   const [selectedIDS, setSelectedIDS] = useState(null);
   const [file, setFile] = useState(null);

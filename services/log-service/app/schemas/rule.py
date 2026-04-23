@@ -40,9 +40,3 @@ class RuleOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
-
-
-class RuleTestResult(BaseModel):
-    rule_id: uuid.UUID
-    alerts_matched: int
-    sample_matches: list[dict[str, Any]]

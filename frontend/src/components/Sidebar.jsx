@@ -35,7 +35,7 @@ const navSections = [
     label: 'Detection',
     items: [
       { to: '/alerts', label: 'Alerts', icon: Bell },
-      { to: '/ingestion-logs', label: 'Ingestion Logs', icon: FileUp },
+      { to: '/ingestion-logs', label: 'Ingestion Logs', icon: FileUp, premiumOnly: true },
       { to: '/quarantine', label: 'Quarantine', icon: ShieldQuestion },
     ],
   },
@@ -44,7 +44,7 @@ const navSections = [
     items: [
       { to: '/threat-intel', label: 'Threat Intel', icon: ShieldAlert },
       { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-      { to: '/engine-comparison', label: 'Engine Comparison', icon: GitCompare },
+      { to: '/engine-comparison', label: 'Engine Comparison', icon: GitCompare, premiumOnly: true },
       { to: '/attack-globe', label: 'GeoIP Map', icon: Globe },
     ],
   },

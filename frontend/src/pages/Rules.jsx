@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Workflow, Plus, Trash2, Pencil, ToggleLeft, ToggleRight, FlaskConical, Loader2, X } from 'lucide-react';
+import { Workflow, Plus, Trash2, Pencil, ToggleLeft, ToggleRight, Loader2, X } from 'lucide-react';
 import { alertService } from '../services/alertService';
 
 const typeLabels = { RATE_LIMIT: 'Rate Limit', CATEGORY_MATCH: 'Category Match', FAILED_LOGIN: 'Failed Login' };
@@ -206,9 +206,6 @@ export default function Rules() {
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editRule, setEditRule] = useState(null);
-  const [testResult, setTestResult] = useState(null);
-  const [testing, setTesting] = useState(null);
-
   const fetchRules = async () => {
     setLoading(true);
     try {
@@ -238,19 +235,6 @@ export default function Rules() {
       setRules((prev) => prev.filter((r) => r.id !== id));
     } catch (err) {
       setError(err.response?.data?.detail || 'Delete failed');
-    }
-  };
-
-  const handleTest = async (id) => {
-    setTesting(id);
-    setTestResult(null);
-    try {
-      const result = await alertService.testRule(id);
-      setTestResult(result);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Test failed');
-    } finally {
-      setTesting(null);
     }
   };
 
@@ -296,25 +280,6 @@ export default function Rules() {
       </div>
 
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">{error}</div>}
-
-      {/* Test result */}
-      {testResult && (
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-blue-400 font-medium">Test Result: {testResult.alerts_matched} alerts matched</span>
-            <button onClick={() => setTestResult(null)} className="text-slate-500 hover:text-white cursor-pointer"><X className="w-4 h-4" /></button>
-          </div>
-          {testResult.sample_matches.length > 0 && (
-            <div className="space-y-1">
-              {testResult.sample_matches.map((m) => (
-                <div key={m.id} className="text-xs text-slate-400 font-mono">
-                  {m.source_ip} | {m.category} | {m.severity} | score={m.threat_score}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Rules table */}
       <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl overflow-hidden">
@@ -368,9 +333,6 @@ export default function Rules() {
                     <td className="px-5 py-3 text-sm text-slate-400 font-mono text-center">{rule.trigger_count}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => handleTest(rule.id)} disabled={testing === rule.id} className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer disabled:opacity-50" title="Test rule">
-                          {testing === rule.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
-                        </button>
                         <button onClick={() => { setEditRule(rule); setShowModal(true); }} className="text-slate-400 hover:text-white transition-colors cursor-pointer" title="Edit">
                           <Pencil className="w-4 h-4" />
                         </button>

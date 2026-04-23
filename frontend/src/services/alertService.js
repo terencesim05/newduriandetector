@@ -120,10 +120,6 @@ export const alertService = {
     const response = await logApi.post(`/api/rules/${id}/toggle`);
     return response.data;
   },
-  async testRule(id) {
-    const response = await logApi.post(`/api/rules/${id}/test`);
-    return response.data;
-  },
 
   // Analytics
   async getTimeSeries({ startDate, endDate, severity, category } = {}) {

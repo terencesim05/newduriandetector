@@ -1,14 +1,12 @@
 import uuid
-from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.auth import get_current_user, CurrentUser
 from app.models.rule import Rule
-from app.models.alert import Alert
-from app.schemas.rule import RuleCreate, RuleUpdate, RuleOut, RuleTestResult
+from app.schemas.rule import RuleCreate, RuleUpdate, RuleOut
 from app.utils.scoping import apply_scope
 
 router = APIRouter(prefix="/api/rules", tags=["rules"])
@@ -85,60 +83,6 @@ async def toggle_rule(
     await db.commit()
     await db.refresh(rule)
     return RuleOut.model_validate(rule)
-
-
-@router.post("/{rule_id}/test", response_model=RuleTestResult)
-async def test_rule(
-    rule_id: uuid.UUID,
-    user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Test a rule against the last 100 alerts to see how many would match."""
-    rule = await _get_rule(rule_id, user, db)
-    cond = rule.conditions or {}
-
-    q = apply_scope(select(Alert), Alert, user)
-    q = q.order_by(Alert.detected_at.desc()).limit(100)
-    result = await db.execute(q)
-    alerts = result.scalars().all()
-
-    matched = []
-    for alert in alerts:
-        if _test_match(rule, cond, alert):
-            matched.append({
-                "id": str(alert.id),
-                "source_ip": alert.source_ip,
-                "category": alert.category.value,
-                "severity": alert.severity.value,
-                "threat_score": alert.threat_score,
-                "detected_at": alert.detected_at.isoformat(),
-            })
-
-    return RuleTestResult(
-        rule_id=rule.id,
-        alerts_matched=len(matched),
-        sample_matches=matched[:10],
-    )
-
-
-def _test_match(rule: Rule, cond: dict, alert: Alert) -> bool:
-    """Simple non-async match check for test endpoint (no rate limit counting)."""
-    if rule.rule_type.value == "CATEGORY_MATCH":
-        cat = cond.get("category")
-        sev = cond.get("severity")
-        if cat and alert.category.value != cat:
-            return False
-        if sev and alert.severity.value != sev:
-            return False
-        return bool(cat or sev)
-    elif rule.rule_type.value == "RATE_LIMIT":
-        cat = cond.get("category")
-        if cat:
-            return alert.category.value == cat
-        return True
-    elif rule.rule_type.value == "FAILED_LOGIN":
-        return alert.category.value == "BRUTE_FORCE"
-    return False
 
 
 async def _get_rule(rule_id: uuid.UUID, user: CurrentUser, db: AsyncSession) -> Rule:

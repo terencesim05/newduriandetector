@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Loader2, Activity, Users, ShieldAlert } from 'lucide-react';
 import { alertService } from '../services/alertService';
+import { useAuth } from '../context/AuthContext';
 
 const WINDOWS = [
   { label: '5 min', value: '5m' },
@@ -276,6 +278,9 @@ function UniqueCoverage({ data, loading, activeEngines }) {
 }
 
 export default function EngineComparison() {
+  const { user } = useAuth();
+  if (user?.tier?.toUpperCase() === 'FREE') return <Navigate to="/dashboard" replace />;
+
   const [window, setWindow] = useState('1h');
   const [minEngines, setMinEngines] = useState(2);
 
