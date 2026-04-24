@@ -148,7 +148,7 @@ export default function Signup() {
             </svg>
             <span className="text-xs text-blue-300/80">
               {tier === 'free' && 'Get started with core IDS monitoring — 7-day alert history, analytics, and more.'}
-              {tier === 'premium' && 'Unlock full alert history, custom rules, ingestion logs, ML configuration & more.'}
+              {tier === 'premium' && 'Unlock full alert history, custom rules, incident management, ML configuration & more.'}
               {tier === 'exclusive' && 'Everything in Premium plus team workspaces, alert assignment & dedicated support.'}
             </span>
           </div>

@@ -14,9 +14,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  ArrowUpCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { incidentService } from '../services/incidentService';
+import { useAuth } from '../context/AuthContext';
 
 const toastStyle = {
   style: {
@@ -55,6 +57,35 @@ const priorityLabels = {
 };
 
 export default function Incidents() {
+  const { user } = useAuth();
+  const isPremiumOrExclusive = ['PREMIUM', 'EXCLUSIVE'].includes((user?.tier || 'free').toUpperCase());
+
+  if (!isPremiumOrExclusive) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <AlertTriangle className="w-6 h-6 text-blue-400" />
+          <h1 className="text-2xl font-bold text-white">Incidents</h1>
+        </div>
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-8 text-center">
+          <ArrowUpCircle className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-white mb-2">Upgrade Required</h2>
+          <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto">
+            Incident management is available on Premium and Exclusive plans.
+            Upgrade to create incidents, link alerts, add notes, and track investigations.
+          </p>
+          <a
+            href="/settings"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-sm text-white font-medium hover:bg-blue-500 transition-colors"
+          >
+            <ArrowUpCircle className="w-4 h-4" />
+            Upgrade Plan
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const [incidents, setIncidents] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);

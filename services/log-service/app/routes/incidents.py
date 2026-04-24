@@ -28,6 +28,13 @@ from app.utils.scoping import apply_scope
 
 router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 
+_PREMIUM_TIERS = {"PREMIUM", "EXCLUSIVE"}
+
+
+def _require_premium(user: CurrentUser):
+    if (user.tier or "free").upper() not in _PREMIUM_TIERS:
+        raise HTTPException(status_code=403, detail="Incident management requires a Premium or Exclusive plan")
+
 
 # ── helpers ──────────────────────────────────────────────────────────────
 
@@ -91,6 +98,7 @@ async def create_incident(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     incident = Incident(
         title=body.title,
         description=body.description,
@@ -115,6 +123,7 @@ async def list_incidents(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     base = apply_scope(select(Incident), Incident, user)
 
     if status_filter:
@@ -152,6 +161,7 @@ async def get_incident(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     incident = await _get_incident_or_404(incident_id, user, db)
     ac = await _alert_count(incident.id, db)
     notes = await _notes_for(incident.id, db)
@@ -165,6 +175,7 @@ async def update_incident(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     incident = await _get_incident_or_404(incident_id, user, db)
 
     update_data = body.model_dump(exclude_unset=True)
@@ -186,6 +197,7 @@ async def delete_incident(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     incident = await _get_incident_or_404(incident_id, user, db)
     await db.delete(incident)
     await db.commit()
@@ -200,6 +212,7 @@ async def add_note(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     await _get_incident_or_404(incident_id, user, db)
 
     note = IncidentNote(
@@ -223,6 +236,7 @@ async def link_alert(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     await _get_incident_or_404(incident_id, user, db)
 
     # Verify alert exists and belongs to user's scope
@@ -259,6 +273,7 @@ async def unlink_alert(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     await _get_incident_or_404(incident_id, user, db)
 
     result = await db.execute(
@@ -278,6 +293,7 @@ async def list_linked_alerts(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     await _get_incident_or_404(incident_id, user, db)
 
     q = (

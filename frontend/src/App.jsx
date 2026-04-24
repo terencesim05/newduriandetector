@@ -316,7 +316,6 @@ function App() {
                   'Quarantine & Threat Intel',
                   'GeoIP attack map',
                   'Blacklist & Whitelist',
-                  'Incident management',
                   'AI Chatbot (read-only)',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-sm text-slate-300">
@@ -351,6 +350,7 @@ function App() {
                   'Everything in Free, plus:',
                   'Full alert history (no time limit)',
                   'Custom correlation rules',
+                  'Incident management',
                   'Ingestion Logs & file upload',
                   'Engine Comparison',
                   'ML model configuration',
