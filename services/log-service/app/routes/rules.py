@@ -11,12 +11,20 @@ from app.utils.scoping import apply_scope
 
 router = APIRouter(prefix="/api/rules", tags=["rules"])
 
+_PREMIUM_TIERS = {"PREMIUM", "EXCLUSIVE"}
+
+
+def _require_premium(user: CurrentUser):
+    if (user.tier or "free").upper() not in _PREMIUM_TIERS:
+        raise HTTPException(status_code=403, detail="Rules require a Premium or Exclusive plan")
+
 
 @router.get("", response_model=list[RuleOut])
 async def list_rules(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     q = apply_scope(select(Rule), Rule, user).order_by(Rule.priority.desc())
     result = await db.execute(q)
     return [RuleOut.model_validate(r) for r in result.scalars().all()]
@@ -28,6 +36,7 @@ async def create_rule(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     rule = Rule(
         name=body.name,
         description=body.description,
@@ -52,6 +61,7 @@ async def update_rule(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     rule = await _get_rule(rule_id, user, db)
     for field, value in body.model_dump(exclude_none=True).items():
         setattr(rule, field, value)
@@ -66,6 +76,7 @@ async def delete_rule(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     rule = await _get_rule(rule_id, user, db)
     await db.delete(rule)
     await db.commit()
@@ -78,6 +89,7 @@ async def toggle_rule(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_premium(user)
     rule = await _get_rule(rule_id, user, db)
     rule.enabled = not rule.enabled
     await db.commit()

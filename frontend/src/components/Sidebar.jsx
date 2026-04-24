@@ -52,7 +52,7 @@ const navSections = [
   {
     label: 'Policies',
     items: [
-      { to: '/rules', label: 'Rules', icon: Workflow },
+      { to: '/rules', label: 'Rules', icon: Workflow, premiumOnly: true },
       { to: '/blacklist', label: 'Blacklist', icon: ShieldBan },
       { to: '/whitelist', label: 'Whitelist', icon: ShieldCheck },
       { to: '/ml-config', label: 'ML Config', icon: BrainCircuit, premiumOnly: true },
@@ -61,7 +61,7 @@ const navSections = [
   {
     label: 'Workspace',
     items: [
-      { to: '/incidents', label: 'Incidents', icon: AlertTriangle },
+      { to: '/incidents', label: 'Incidents', icon: AlertTriangle, premiumOnly: true },
       { to: '/teams', label: 'Teams', icon: Users, exclusiveOnly: true },
       { to: '/settings', label: 'Settings', icon: Settings },
     ],

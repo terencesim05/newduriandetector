@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Workflow, Plus, Trash2, Pencil, ToggleLeft, ToggleRight, Loader2, X } from 'lucide-react';
+import { Workflow, Plus, Trash2, Pencil, ToggleLeft, ToggleRight, Loader2, X, ArrowUpCircle } from 'lucide-react';
 import { alertService } from '../services/alertService';
+import { useAuth } from '../context/AuthContext';
 
 const typeLabels = { RATE_LIMIT: 'Rate Limit', CATEGORY_MATCH: 'Category Match', FAILED_LOGIN: 'Failed Login' };
 const categories = ['SQL_INJECTION', 'DDOS', 'MALWARE', 'BRUTE_FORCE', 'PORT_SCAN', 'XSS', 'COMMAND_INJECTION', 'PRIVILEGE_ESCALATION', 'DATA_EXFILTRATION', 'ANOMALY', 'OTHER'];
@@ -201,11 +202,41 @@ function RuleModal({ rule, onClose, onSave }) {
 }
 
 export default function Rules() {
+  const { user } = useAuth();
+  const isPremiumOrExclusive = ['PREMIUM', 'EXCLUSIVE'].includes((user?.tier || 'free').toUpperCase());
+
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editRule, setEditRule] = useState(null);
+
+  if (!isPremiumOrExclusive) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Workflow className="w-6 h-6 text-blue-400" />
+          <h1 className="text-2xl font-bold text-white">Rules</h1>
+        </div>
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-8 text-center">
+          <ArrowUpCircle className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-white mb-2">Upgrade Required</h2>
+          <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto">
+            Custom correlation rules are available on Premium and Exclusive plans.
+            Upgrade to define rate limits, category matches, and automated response actions.
+          </p>
+          <a
+            href="/settings"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-sm text-white font-medium hover:bg-blue-500 transition-colors"
+          >
+            <ArrowUpCircle className="w-4 h-4" />
+            Upgrade Plan
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const fetchRules = async () => {
     setLoading(true);
     try {

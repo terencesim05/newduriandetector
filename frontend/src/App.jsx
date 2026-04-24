@@ -315,7 +315,7 @@ function App() {
                   'SOC dashboard & analytics',
                   'Quarantine & Threat Intel',
                   'GeoIP attack map',
-                  'Rules, Blacklist & Whitelist',
+                  'Blacklist & Whitelist',
                   'Incident management',
                   'AI Chatbot (read-only)',
                 ].map((item) => (
@@ -350,6 +350,7 @@ function App() {
                 {[
                   'Everything in Free, plus:',
                   'Full alert history (no time limit)',
+                  'Custom correlation rules',
                   'Ingestion Logs & file upload',
                   'Engine Comparison',
                   'ML model configuration',
