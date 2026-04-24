@@ -22,6 +22,7 @@ import {
   ChevronDown,
   X,
   Bot,
+  Lock,
 } from 'lucide-react';
 
 const navSections = [
@@ -72,10 +73,14 @@ function SectionGroup({ label, items, tier, onClose }) {
   const hasActiveChild = items.some((item) => location.pathname === item.to);
   const [open, setOpen] = useState(hasActiveChild);
 
-  // Filter by tier
-  const visibleItems = items
-    .filter(({ premiumOnly }) => !premiumOnly || ['PREMIUM', 'EXCLUSIVE'].includes(tier.toUpperCase()))
-    .filter(({ exclusiveOnly }) => !exclusiveOnly || tier.toUpperCase() === 'EXCLUSIVE');
+  const upperTier = tier.toUpperCase();
+
+  const visibleItems = items.map((item) => ({
+    ...item,
+    locked:
+      (item.premiumOnly && !['PREMIUM', 'EXCLUSIVE'].includes(upperTier)) ||
+      (item.exclusiveOnly && upperTier !== 'EXCLUSIVE'),
+  }));
 
   if (visibleItems.length === 0) return null;
 
@@ -90,22 +95,34 @@ function SectionGroup({ label, items, tier, onClose }) {
       </button>
       {open && (
         <div className="space-y-0.5 mt-0.5">
-          {visibleItems.map(({ to, label: itemLabel, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05] border border-transparent'
-                }`
-              }
-            >
-              <Icon className="w-[18px] h-[18px] shrink-0" />
-              {itemLabel}
-            </NavLink>
+          {visibleItems.map(({ to, label: itemLabel, icon: Icon, locked, exclusiveOnly }) => (
+            locked ? (
+              <div
+                key={to}
+                title={exclusiveOnly ? 'Exclusive plan required' : 'Premium plan required'}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 border border-transparent cursor-not-allowed select-none"
+              >
+                <Icon className="w-[18px] h-[18px] shrink-0" />
+                {itemLabel}
+                <Lock className="w-3 h-3 ml-auto shrink-0" />
+              </div>
+            ) : (
+              <NavLink
+                key={to}
+                to={to}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.05] border border-transparent'
+                  }`
+                }
+              >
+                <Icon className="w-[18px] h-[18px] shrink-0" />
+                {itemLabel}
+              </NavLink>
+            )
           ))}
         </div>
       )}

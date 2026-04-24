@@ -10,16 +10,6 @@ const severityColors = {
 
 export function useAlertNotifications(alerts) {
   const prevCountRef = useRef(0);
-  const permissionRef = useRef(Notification.permission);
-
-  // Request notification permission on mount
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then((perm) => {
-        permissionRef.current = perm;
-      });
-    }
-  }, []);
 
   // React to new alerts
   useEffect(() => {
@@ -67,22 +57,6 @@ export function useAlertNotifications(alerts) {
         );
       }
 
-      // Desktop notification for CRITICAL
-      if (isCritical && permissionRef.current === 'granted') {
-        try {
-          const notif = new Notification('Critical Threat Detected', {
-            body: `${alert.category} from ${alert.source_ip}`,
-            icon: '/vite.svg',
-            tag: alert.id,
-          });
-          notif.onclick = () => {
-            window.focus();
-            notif.close();
-          };
-        } catch {
-          // Desktop notifications may fail in some contexts
-        }
-      }
     });
   }, [alerts]);
 }
