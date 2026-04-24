@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { incidentService } from '../services/incidentService';
+import { alertService } from '../services/alertService';
 import { useAuth } from '../context/AuthContext';
 
 const toastStyle = {
@@ -109,6 +110,8 @@ export default function Incidents() {
 
   const [linkAlertId, setLinkAlertId] = useState('');
   const [linkingAlert, setLinkingAlert] = useState(false);
+  const [availableAlerts, setAvailableAlerts] = useState([]);
+  const [linkedAlertIds, setLinkedAlertIds] = useState(new Set());
 
   const [statusUpdating, setStatusUpdating] = useState(false);
 
@@ -141,8 +144,14 @@ export default function Incidents() {
   const fetchDetail = async (id) => {
     setDetailLoading(true);
     try {
-      const data = await incidentService.getIncident(id);
+      const [data, linked, allAlerts] = await Promise.all([
+        incidentService.getIncident(id),
+        incidentService.getLinkedAlerts(id),
+        alertService.getAlerts({ pageSize: 100 }),
+      ]);
       setExpandedDetail(data);
+      setLinkedAlertIds(new Set(linked.map((a) => a.id)));
+      setAvailableAlerts(allAlerts.alerts || []);
     } catch {
       toast.error('Failed to load incident details', toastStyle);
     } finally {
@@ -154,6 +163,8 @@ export default function Incidents() {
     if (expandedId === id) {
       setExpandedId(null);
       setExpandedDetail(null);
+      setAvailableAlerts([]);
+      setLinkedAlertIds(new Set());
     } else {
       setExpandedId(id);
       setNoteText('');
@@ -212,12 +223,13 @@ export default function Incidents() {
   };
 
   const handleLinkAlert = async (incidentId) => {
-    if (!linkAlertId.trim()) return;
+    if (!linkAlertId) return;
     setLinkingAlert(true);
     try {
       await incidentService.linkAlert(incidentId, linkAlertId);
       toast.success('Alert linked', toastStyle);
       setLinkAlertId('');
+      setLinkedAlertIds((prev) => new Set([...prev, linkAlertId]));
       fetchDetail(incidentId);
     } catch {
       toast.error('Failed to link alert', toastStyle);
@@ -488,16 +500,23 @@ export default function Incidents() {
                             Link Alert
                           </h4>
                           <div className="flex gap-2">
-                            <input
-                              type="text"
+                            <select
                               value={linkAlertId}
                               onChange={(e) => setLinkAlertId(e.target.value)}
-                              placeholder="Paste alert ID..."
-                              className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-blue-500/40 transition-all"
-                            />
+                              className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-blue-500/40 transition-all cursor-pointer appearance-none"
+                            >
+                              <option value="">Select an alert...</option>
+                              {availableAlerts
+                                .filter((a) => !linkedAlertIds.has(a.id))
+                                .map((a) => (
+                                  <option key={a.id} value={a.id}>
+                                    {a.severity} · {a.category.replace(/_/g, ' ')} · {a.source_ip} — {new Date(a.detected_at).toLocaleString()}
+                                  </option>
+                                ))}
+                            </select>
                             <button
                               onClick={() => handleLinkAlert(inc.id)}
-                              disabled={linkingAlert || !linkAlertId.trim()}
+                              disabled={linkingAlert || !linkAlertId}
                               className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium px-3 py-2 rounded-lg transition-all cursor-pointer"
                             >
                               {linkingAlert ? 'Linking...' : 'Link'}
