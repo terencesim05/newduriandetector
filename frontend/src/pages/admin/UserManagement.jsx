@@ -88,7 +88,7 @@ export default function UserManagement() {
         setActionMsg(data.detail);
       } else if (type === 'reset_password') {
         const data = await adminService.resetPassword(targetUser.id);
-        setActionMsg(`${data.detail} Temp password: ${data.temp_password}`);
+        setActionMsg(data.detail);
       }
       loadUsers();
       setSelectedUser(null);
@@ -328,7 +328,7 @@ export default function UserManagement() {
             <p className="text-sm text-slate-400 mb-1">
               {confirmAction.type === 'suspend' && 'This will prevent the user from logging in.'}
               {confirmAction.type === 'unsuspend' && 'This will restore the user\'s access.'}
-              {confirmAction.type === 'reset_password' && 'This will reset the password to a temporary one.'}
+              {confirmAction.type === 'reset_password' && 'A temporary password will be generated and emailed to the user.'}
             </p>
             <p className="text-sm text-white mb-5">
               {confirmAction.user.email}

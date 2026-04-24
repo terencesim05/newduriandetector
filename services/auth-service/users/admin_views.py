@@ -1,3 +1,8 @@
+import secrets
+import string
+
+from django.conf import settings
+from django.core.mail import send_mail
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -190,14 +195,39 @@ class AdminViewSet(viewsets.GenericViewSet):
         except User.DoesNotExist:
             return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        temp_password = 'TempPass123!'
+        alphabet = string.ascii_letters + string.digits + '!@#$%'
+        temp_password = (
+            secrets.choice(string.ascii_uppercase)
+            + secrets.choice(string.digits)
+            + secrets.choice('!@#$%')
+            + ''.join(secrets.choice(alphabet) for _ in range(9))
+        )
+
         user.set_password(temp_password)
         user.save(update_fields=['password'])
         _log_action(request, 'password_reset', f'Reset password for {user.email}')
-        return Response({
-            'detail': f'Password reset for {user.email}.',
-            'temp_password': temp_password,
-        })
+
+        try:
+            send_mail(
+                subject='Your DurianDetector password has been reset',
+                message=(
+                    f'Hi {user.first_name or user.email},\n\n'
+                    f'An administrator has reset your DurianDetector password.\n\n'
+                    f'Your temporary password is: {temp_password}\n\n'
+                    f'Please log in and change your password immediately.\n\n'
+                    f'— DurianDetector'
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            return Response(
+                {'detail': f'Password reset but email failed to send: {e}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response({'detail': f'Password reset and email sent to {user.email}.'})
 
     # ── Subscriptions ────────────────────────────────────────────────
 

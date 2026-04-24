@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Query, Path
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +28,10 @@ async def list_alerts(
     db: AsyncSession = Depends(get_db),
 ):
     base = apply_scope(select(Alert), Alert, user)
+
+    if (user.tier or "free").upper() == "FREE":
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        base = base.where(Alert.detected_at >= cutoff)
 
     if severity:
         base = base.where(Alert.severity == severity)

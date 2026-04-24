@@ -307,13 +307,13 @@ function App() {
                 <span className="text-4xl font-bold tracking-tight text-white">$0</span>
                 <span className="text-slate-500 text-sm">/month</span>
               </div>
-              <p className="mt-3 text-sm text-slate-400">Get started with basic IDS monitoring at no cost.</p>
+              <p className="mt-3 text-sm text-slate-400">Get started with core IDS monitoring at no cost.</p>
 
               <ul className="mt-8 space-y-3">
                 {[
-                  'Real-time alert monitoring',
+                  'Real-time alert feed (7-day history)',
                   'SOC dashboard & analytics',
-                  'Alerts, Quarantine & Threat Intel',
+                  'Quarantine & Threat Intel',
                   'GeoIP attack map',
                   'Rules, Blacklist & Whitelist',
                   'Incident management',
@@ -344,18 +344,17 @@ function App() {
                 <span className="text-4xl font-bold tracking-tight text-white">$49</span>
                 <span className="text-slate-500 text-sm">/month</span>
               </div>
-              <p className="mt-3 text-sm text-slate-400">Advanced correlation and alerting for growing teams.</p>
+              <p className="mt-3 text-sm text-slate-400">Full platform access for serious security operations.</p>
 
               <ul className="mt-8 space-y-3">
                 {[
                   'Everything in Free, plus:',
+                  'Full alert history (no time limit)',
                   'Ingestion Logs & file upload',
                   'Engine Comparison',
-                  'ML model configurations',
-                  'Unlimited alerts',
-                  'Email notifications',
-                  'PDF report generation',
-                  'AI Chatbot (full)',
+                  'ML model configuration',
+                  'Analytics PDF exports',
+                  'AI Chatbot (full access)',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-sm text-slate-300">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-4 mt-0.5 text-blue-400 shrink-0">
@@ -378,12 +377,13 @@ function App() {
                 <span className="text-4xl font-bold tracking-tight text-white">$199</span>
                 <span className="text-slate-500 text-sm">/month</span>
               </div>
-              <p className="mt-3 text-sm text-slate-400">Full platform access with dedicated support for enterprise SOCs.</p>
+              <p className="mt-3 text-sm text-slate-400">Enterprise SOC collaboration with dedicated support.</p>
 
               <ul className="mt-8 space-y-3">
                 {[
                   'Everything in Premium, plus:',
-                  'Team workspace (5 members)',
+                  'Team workspace (up to 5 members)',
+                  'Alert assignment & team activity',
                   'Dedicated support',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-sm text-slate-300">

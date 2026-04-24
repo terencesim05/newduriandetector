@@ -147,9 +147,9 @@ export default function Signup() {
               <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
             </svg>
             <span className="text-xs text-blue-300/80">
-              {tier === 'free' && 'Start monitoring with basic features at no cost.'}
-              {tier === 'premium' && 'Unlock ML configurations, incident management & more.'}
-              {tier === 'exclusive' && 'Full platform access with team collaboration & dedicated support.'}
+              {tier === 'free' && 'Get started with core IDS monitoring — 7-day alert history, analytics, and more.'}
+              {tier === 'premium' && 'Unlock full alert history, ingestion logs, ML configuration, engine comparison & more.'}
+              {tier === 'exclusive' && 'Everything in Premium plus team workspaces, alert assignment & dedicated support.'}
             </span>
           </div>
 
