@@ -53,7 +53,8 @@
       "Bash(ls -1 /c/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/app/routes/*.py)",
       "Bash(python -c \"import ast; ast.parse\\(open\\('app/routes/engine_comparison.py'\\).read\\(\\)\\); print\\('ok'\\)\")",
       "Bash(npx eslint *)",
-      "Bash(python *)"
+      "Bash(python *)",
+      "Bash(pip show *)"
     ]
   }
 }
