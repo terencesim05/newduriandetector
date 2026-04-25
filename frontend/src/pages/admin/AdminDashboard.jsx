@@ -9,13 +9,7 @@ import {
   Search,
   FileText,
   TrendingUp,
-  UserPlus,
   UsersRound,
-  ShieldAlert,
-  Database,
-  Server,
-  CheckCircle,
-  XCircle,
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -24,7 +18,6 @@ export default function AdminDashboard() {
   const [auditLog, setAuditLog] = useState([]);
   const [recentUsers, setRecentUsers] = useState([]);
   const [teamData, setTeamData] = useState(null);
-  const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -37,7 +30,6 @@ export default function AdminDashboard() {
           adminService.getAuditLog(10),
           adminService.getUsers({ per_page: 5 }),
           adminService.getTeams(),
-          adminService.getSystemHealth(),
         ]);
 
         if (results[0].status === 'fulfilled') setStats(results[0].value);
@@ -45,7 +37,6 @@ export default function AdminDashboard() {
         if (results[2].status === 'fulfilled') setAuditLog(results[2].value);
         if (results[3].status === 'fulfilled') setRecentUsers(results[3].value.users || []);
         if (results[4].status === 'fulfilled') setTeamData(results[4].value);
-        if (results[5].status === 'fulfilled') setHealth(results[5].value);
       } catch (err) {
         console.error('Failed to load admin stats:', err);
       } finally {
@@ -131,53 +122,21 @@ export default function AdminDashboard() {
         })}
       </div>
 
-      {/* System Health + Alert Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* System Health */}
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-white mb-4">System Health</h2>
-          <div className="space-y-3">
-            <div className={`flex items-center justify-between p-3 rounded-lg border ${health?.database?.ok ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
-              <div className="flex items-center gap-2">
-                <Database className={`w-4 h-4 ${health?.database?.ok ? 'text-emerald-400' : 'text-red-400'}`} />
-                <span className="text-sm text-white">Database</span>
-              </div>
-              {health?.database?.ok ? (
-                <span className="flex items-center gap-1 text-xs text-emerald-400"><CheckCircle className="w-3.5 h-3.5" /> Connected</span>
-              ) : (
-                <span className="flex items-center gap-1 text-xs text-red-400"><XCircle className="w-3.5 h-3.5" /> Disconnected</span>
-              )}
+      {/* Alert Overview */}
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-white mb-4">Alert Overview</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'This Week', value: alertStats?.alerts_this_week || 0, color: 'text-blue-400' },
+            { label: 'Flagged', value: alertStats?.blocked_alerts || 0, color: 'text-red-400' },
+            { label: 'Quarantined', value: alertStats?.quarantined_alerts || 0, color: 'text-yellow-400' },
+            { label: 'Teams', value: teamData?.total || 0, color: 'text-purple-400' },
+          ].map((item) => (
+            <div key={item.label} className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-3 text-center">
+              <p className={`text-xl font-bold ${item.color}`}>{item.value}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{item.label}</p>
             </div>
-            <div className={`flex items-center justify-between p-3 rounded-lg border ${health?.fastapi?.ok ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
-              <div className="flex items-center gap-2">
-                <Server className={`w-4 h-4 ${health?.fastapi?.ok ? 'text-emerald-400' : 'text-red-400'}`} />
-                <span className="text-sm text-white">FastAPI</span>
-              </div>
-              {health?.fastapi?.ok ? (
-                <span className="flex items-center gap-1 text-xs text-emerald-400"><CheckCircle className="w-3.5 h-3.5" /> Running</span>
-              ) : (
-                <span className="flex items-center gap-1 text-xs text-red-400"><XCircle className="w-3.5 h-3.5" /> Down</span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Alert Overview */}
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-white mb-4">Alert Overview</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'This Week', value: alertStats?.alerts_this_week || 0, color: 'text-blue-400' },
-              { label: 'Flagged', value: alertStats?.blocked_alerts || 0, color: 'text-red-400' },
-              { label: 'Quarantined', value: alertStats?.quarantined_alerts || 0, color: 'text-yellow-400' },
-              { label: 'Teams', value: teamData?.total || 0, color: 'text-purple-400' },
-            ].map((item) => (
-              <div key={item.label} className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-3 text-center">
-                <p className={`text-xl font-bold ${item.color}`}>{item.value}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{item.label}</p>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       </div>
 
