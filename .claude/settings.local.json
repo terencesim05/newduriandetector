@@ -54,7 +54,9 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\('app/routes/engine_comparison.py'\\).read\\(\\)\\); print\\('ok'\\)\")",
       "Bash(npx eslint *)",
       "Bash(python *)",
-      "Bash(pip show *)"
+      "Bash(pip show *)",
+      "Bash(AUTH_BASE_URL=https://auth-service-production-1c73.up.railway.app python -m pytest users/tests.py -v)",
+      "Bash(AUTH_BASE_URL=https://auth-service-production-1c73.up.railway.app python -m pytest \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/auth-service/users/tests.py\" -v -c \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/auth-service/pytest.ini\")"
     ]
   }
 }
