@@ -154,7 +154,7 @@ async def ingest_alerts(
                 source_port=alert.source_port or 0,
                 destination_port=alert.destination_port or 0,
                 protocol=alert.protocol,
-                flagged_by_threatfox=alert.flagged_by_threatfox,
+                flagged_by_threatfox=flagged,
                 ids_source=alert.ids_source.value if hasattr(alert.ids_source, 'value') else alert.ids_source,
                 model_type=ml_model_type,
             )
