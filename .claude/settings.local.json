@@ -57,7 +57,9 @@
       "Bash(pip show *)",
       "Bash(AUTH_BASE_URL=https://auth-service-production-1c73.up.railway.app python -m pytest users/tests.py -v)",
       "Bash(AUTH_BASE_URL=https://auth-service-production-1c73.up.railway.app python -m pytest \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/auth-service/users/tests.py\" -v -c \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/auth-service/pytest.ini\")",
-      "Bash(AUTH_BASE_URL=https://auth-service-production-1c73.up.railway.app LOG_BASE_URL=https://log-service-production-f5f2.up.railway.app python -m pytest \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/tests\" -v -c \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/pytest.ini\")"
+      "Bash(AUTH_BASE_URL=https://auth-service-production-1c73.up.railway.app LOG_BASE_URL=https://log-service-production-f5f2.up.railway.app python -m pytest \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/tests\" -v -c \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/pytest.ini\")",
+      "Bash(AUTH_BASE_URL=https://auth-service-production-1c73.up.railway.app python -m pytest \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/auth-service/users/tests.py\" -m system -v -c \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/auth-service/pytest.ini\")",
+      "Bash(AUTH_BASE_URL=https://auth-service-production-1c73.up.railway.app LOG_BASE_URL=https://log-service-production-f5f2.up.railway.app AUTH_ADMIN_USERNAME=admin@admin.com AUTH_ADMIN_PASSWORD=admin123 AUTH_PREMIUM_USERNAME=linuxtest@linuxtest.com AUTH_PREMIUM_PASSWORD=linuxtest python -m pytest \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/auth-service/users/tests.py\" \"C:/Users/Terence01/Documents/GitHub/NewDurianDetector/newduriandetector/services/log-service/tests\" -v)"
     ]
   }
 }

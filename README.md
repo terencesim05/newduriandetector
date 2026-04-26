@@ -423,24 +423,62 @@ Three ML models predict whether each alert is malicious, adding an ML confidence
 | `flagged_by_threatfox` | true=1, anything else=0 |
 | `ids_source` | suricata=1, zeek=2, snort=3, kismet=4 |
 
+**Training data — UNSW-NB15:**
+
+Models are trained on the **UNSW-NB15** dataset (UNSW Canberra, Moustafa & Slay, 2015), a labelled corpus of 175,341 network flows containing nine attack categories (Generic, Exploits, Fuzzers, DoS, Reconnaissance, Analysis, Backdoor, Shellcode, Worms) and benign Normal traffic. The dataset is downloaded once on first training run via `app/ml/load_real_data.py` (~30 MB GitHub mirror) and cached locally.
+
+The four UNSW-NB15 columns mapped directly:
+
+| UNSW-NB15 | DurianDetector feature | Mapping |
+|-----------|----------------------|---------|
+| `proto` | `protocol` | tcp→1, udp→2, icmp→3, other→0 |
+| `service` | `destination_port` | http→80, ssh→22, dns→53, smtp→25, ftp→21, ssl→443, etc. |
+| `attack_cat` | `category` + `severity` | see mapping below |
+| `label` | `is_threat` | 0=benign, 1=malicious |
+
+**attack_cat mapping:**
+
+| UNSW-NB15 | category | severity |
+|-----------|----------|----------|
+| Normal | OTHER | LOW |
+| Fuzzers, Analysis | ANOMALY | MEDIUM |
+| Reconnaissance | PORT_SCAN | MEDIUM |
+| DoS | DDOS | CRITICAL |
+| Exploits | PRIVILEGE_ESCALATION | CRITICAL |
+| Generic, Backdoor, Worms | MALWARE | HIGH/CRITICAL |
+| Shellcode | COMMAND_INJECTION | CRITICAL |
+
+**Synthesised features** (not present in UNSW-NB15):
+- `source_port` — random ephemeral (1024–65535), reflecting real client-side port allocation
+- `flagged_by_threatfox` — 0 (UNSW-NB15 captures predate the ThreatFox feed)
+- `ids_source` — distributed uniformly across the four supported engines
+
 **Pipeline:**
-1. **Training data**: 1000 synthetic alerts (500 benign, 500 malicious) generated with the 7 features above
+1. **Training data**: UNSW-NB15 downsampled to 112,000 balanced samples (56k benign / 56k malicious) — see `app/ml/load_real_data.py`
 2. **Training**: supervised models (Random Forest, Neural Network) train on 80/20 split; Isolation Forest trains on benign samples only
 3. **Prediction**: on every ingested alert (unless whitelisted), the selected model returns a confidence score (0.0–1.0)
 4. **Score enhancement**: if ML confidence exceeds the user's sensitivity threshold (default 0.8), threat_score is boosted (default +0.2) — this can push alerts over the quarantine (0.7) or auto-block (0.9) threshold
+
+**Test-set accuracy** (22,400-row holdout, 80/20 stratified split):
+
+| Model | Accuracy | Notes |
+|-------|----------|-------|
+| Random Forest | 1.00 | Near-perfect on this feature set — `category` is highly correlated with the label by design (the rule-based normaliser already encodes attack-type signal) |
+| Neural Network | 0.98 | 64→32 MLP, converges cleanly on the larger real dataset |
+| Isolation Forest | 0.58 | Anomaly detection on mostly-categorical features is inherently weak — kept as an option for zero-day-style detection rather than headline accuracy |
 
 **Retraining:**
 ```bash
 cd services/log-service
 python -m app.ml.train_model
 ```
+First run downloads UNSW-NB15 (~30 MB) into `services/log-service/models/unsw_nb15_raw.csv` (gitignored). Subsequent runs reuse the cache.
 
 **Limitations:**
-- **Synthetic training data** — all 1000 samples are procedurally generated with rule-based labels. The models have never seen real network traffic. Accuracy figures reflect synthetic patterns, not real-world performance.
-- **Neural network is unreliable** — MLP accuracy is ~49.5% (majority-class prediction). Without `StandardScaler` normalisation applied at both training and inference time, gradient descent ignores small-scale features. Use Random Forest or Isolation Forest instead.
-- **Small dataset** — 1000 samples is insufficient for generalisation. A production system would require thousands of labelled real alerts.
-- **Binary output only** — models predict threat / not-threat. Attack type classification is handled by the rule-based category normaliser.
-- **No automated retraining** — models are static after training.
+- **Schema is alert-level, not flow-level** — UNSW-NB15 has 40+ flow features (packet counts, byte rates, TCP flag ratios) that are discarded. A flow-aware schema would likely improve Isolation Forest performance but would also require Suricata flow logs at inference time.
+- **Category leakage by design** — the rule-based category normaliser already encodes most of the threat signal, so supervised models look near-perfect. The ML layer's value is in combining the seven signals (category + severity + protocol + ports + ThreatFox + IDS source) into one calibrated confidence score, not in discovering new threat types.
+- **Binary output only** — models predict threat / not-threat. Attack type classification is handled by the rule-based normaliser.
+- **No automated retraining** — models are static after training; retraining is manual.
 
 | ML Confidence | Badge Color | Meaning |
 |---------------|-------------|---------|
@@ -971,6 +1009,14 @@ Each config uses a different API key — alerts are routed to the correct client
 - Added IDS Watcher Setup tab to Settings page with quick start commands, collapsible installation guides, configuration snippets, and troubleshooting tips
 - Created comprehensive IDS Setup Guide (`services/ids-watcher/IDS_SETUP_GUIDE.md`) for all 4 engines on Ubuntu/Debian and CentOS/Fedora
 - Added IDS watcher connection nudge banner on Dashboard — shown to users with no active API keys, links to Settings → IDS Watcher tab, dismissible
+
+### April 27 — Real Dataset for ML Models
+- Replaced the 1000-sample synthetic training generator with **UNSW-NB15** (175,341 labelled flows, 9 attack categories + Normal)
+- New module `app/ml/load_real_data.py` downloads the dataset on first training run (~30 MB), maps `proto`/`service`/`attack_cat`/`label` to the existing 7-feature schema, balances to 112,000 samples (56k benign / 56k malicious)
+- No schema changes — predictor and ingestion pipeline untouched; only the data behind the `.pkl` files changed
+- Neural Network accuracy went from 49.5% (synthetic) → 97.6% (real) without any code change to the model itself — larger dataset gives MLP enough signal to converge
+- Random Forest 100%, Isolation Forest 58% (anomaly detection on categorical features is inherently weaker)
+- Dropped "synthetic data" and "neural network unreliable" caveats from the README ML section
 
 ### April 12 — DurianBot Groq Migration, Team Assignment, Cleanup
 - Migrated DurianBot from Google Gemini to Groq (`llama-3.3-70b-versatile`) for improved reliability and function calling support

@@ -34,11 +34,10 @@ LEGACY_FILE = "threat_model.pkl"
 
 
 def main():
-    # --- Generate training data if it doesn't exist ---
-    if not os.path.exists(DATA_PATH):
-        print("Training data not found, generating...")
-        from app.ml.generate_training_data import main as generate
-        generate()
+    # --- Load real labelled traffic from UNSW-NB15 ---
+    # Always regenerate so changes to the mapping pick up on retrain.
+    from app.ml.load_real_data import main as load_real
+    load_real()
 
     # --- Load data ---
     df = pd.read_csv(DATA_PATH)
