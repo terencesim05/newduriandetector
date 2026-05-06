@@ -2,10 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminService } from '../../services/adminService';
 import {
-  Users,
-  CreditCard,
-  DollarSign,
-  Bell,
   Search,
   FileText,
   TrendingUp,
@@ -14,10 +10,8 @@ import {
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
-  const [alertStats, setAlertStats] = useState(null);
   const [auditLog, setAuditLog] = useState([]);
   const [recentUsers, setRecentUsers] = useState([]);
-  const [teamData, setTeamData] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -26,17 +20,13 @@ export default function AdminDashboard() {
       try {
         const results = await Promise.allSettled([
           adminService.getStats(),
-          adminService.getAlertStats(),
           adminService.getAuditLog(10),
           adminService.getUsers({ per_page: 5 }),
-          adminService.getTeams(),
         ]);
 
         if (results[0].status === 'fulfilled') setStats(results[0].value);
-        if (results[1].status === 'fulfilled') setAlertStats(results[1].value);
-        if (results[2].status === 'fulfilled') setAuditLog(results[2].value);
-        if (results[3].status === 'fulfilled') setRecentUsers(results[3].value.users || []);
-        if (results[4].status === 'fulfilled') setTeamData(results[4].value);
+        if (results[1].status === 'fulfilled') setAuditLog(results[1].value);
+        if (results[2].status === 'fulfilled') setRecentUsers(results[2].value.users || []);
       } catch (err) {
         console.error('Failed to load admin stats:', err);
       } finally {
@@ -54,44 +44,6 @@ export default function AdminDashboard() {
     );
   }
 
-  const statCards = [
-    {
-      label: 'Total Users',
-      value: stats?.total_users || 0,
-      icon: Users,
-      color: 'blue',
-      sub: `${stats?.new_users_today || 0} new today`,
-    },
-    {
-      label: 'Active Subscriptions',
-      value: stats?.active_subscriptions || 0,
-      icon: CreditCard,
-      color: 'green',
-      sub: `${stats?.suspended_users || 0} suspended`,
-    },
-    {
-      label: 'Revenue This Month',
-      value: `$${(stats?.revenue_this_month || 0).toFixed(2)}`,
-      icon: DollarSign,
-      color: 'purple',
-      sub: `${stats?.new_users_month || 0} new users this month`,
-    },
-    {
-      label: 'Alerts Processed Today',
-      value: alertStats?.alerts_today || 0,
-      icon: Bell,
-      color: 'red',
-      sub: `${alertStats?.total_alerts || 0} total all-time`,
-    },
-  ];
-
-  const colorMap = {
-    blue: { bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-400', icon: 'text-blue-400' },
-    green: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400', icon: 'text-emerald-400' },
-    purple: { bg: 'bg-purple-500/10', border: 'border-purple-500/20', text: 'text-purple-400', icon: 'text-purple-400' },
-    red: { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400', icon: 'text-red-400' },
-  };
-
   const tierColors = {
     FREE: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
     PREMIUM: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -103,41 +55,6 @@ export default function AdminDashboard() {
       <div>
         <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
         <p className="text-sm text-slate-400 mt-1">Platform overview and quick actions</p>
-      </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((card) => {
-          const c = colorMap[card.color];
-          return (
-            <div key={card.label} className={`${c.bg} border ${c.border} rounded-xl p-5`}>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-400">{card.label}</span>
-                <card.icon className={`w-5 h-5 ${c.icon}`} />
-              </div>
-              <p className={`text-2xl font-bold mt-2 ${c.text}`}>{card.value}</p>
-              <p className="text-xs text-slate-500 mt-1">{card.sub}</p>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Alert Overview */}
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-white mb-4">Alert Overview</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'This Week', value: alertStats?.alerts_this_week || 0, color: 'text-blue-400' },
-            { label: 'Flagged', value: alertStats?.blocked_alerts || 0, color: 'text-red-400' },
-            { label: 'Quarantined', value: alertStats?.quarantined_alerts || 0, color: 'text-yellow-400' },
-            { label: 'Teams', value: teamData?.total || 0, color: 'text-purple-400' },
-          ].map((item) => (
-            <div key={item.label} className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-3 text-center">
-              <p className={`text-xl font-bold ${item.color}`}>{item.value}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{item.label}</p>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Tier Breakdown + Quick Actions */}
